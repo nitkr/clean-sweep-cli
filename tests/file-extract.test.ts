@@ -83,6 +83,90 @@ describe('file-extract Module', () => {
 
       expect(fs.readFileSync(path.join(destDir, 'binary.dat'))).toEqual(Buffer.from(content));
     });
+
+    it('should copy empty source directory', () => {
+      const srcDir = path.join(tempDir, 'src');
+      const destDir = path.join(tempDir, 'dest');
+      fs.mkdirSync(srcDir);
+
+      copyDirRecursive(srcDir, destDir);
+
+      expect(fs.existsSync(destDir)).toBe(true);
+      expect(fs.readdirSync(destDir).length).toBe(0);
+    });
+
+    it('should handle files with special characters in names', () => {
+      const srcDir = path.join(tempDir, 'src');
+      const destDir = path.join(tempDir, 'dest');
+      
+      fs.mkdirSync(srcDir);
+      const specialFiles = [
+        'file with spaces.txt',
+        'file-with-dashes.txt',
+        'file_with_underscores.txt',
+        'file.with.dots.txt',
+        'file-with-multiple...dots.txt',
+        '123file-starting-with-numbers.txt',
+        'UPPERCASE.TXT',
+        'MixedCase.File.txt',
+        'file-with-dash-and-spaces test.txt',
+      ];
+      
+      specialFiles.forEach(fileName => {
+        fs.writeFileSync(path.join(srcDir, fileName), `content of ${fileName}`);
+      });
+
+      copyDirRecursive(srcDir, destDir);
+
+      specialFiles.forEach(fileName => {
+        expect(fs.existsSync(path.join(destDir, fileName))).toBe(true);
+        expect(fs.readFileSync(path.join(destDir, fileName), 'utf-8')).toBe(`content of ${fileName}`);
+      });
+    });
+
+    it('should overwrite existing files', () => {
+      const srcDir = path.join(tempDir, 'src');
+      const destDir = path.join(tempDir, 'dest');
+      
+      fs.mkdirSync(srcDir);
+      fs.mkdirSync(destDir);
+      fs.writeFileSync(path.join(srcDir, 'file.txt'), 'new content');
+      fs.writeFileSync(path.join(destDir, 'file.txt'), 'old content');
+
+      copyDirRecursive(srcDir, destDir);
+
+      expect(fs.readFileSync(path.join(destDir, 'file.txt'), 'utf-8')).toBe('new content');
+    });
+
+    it('should copy nested empty directories', () => {
+      const srcDir = path.join(tempDir, 'src');
+      const destDir = path.join(tempDir, 'dest');
+      
+      fs.mkdirSync(path.join(srcDir, 'level1', 'level2', 'level3'), { recursive: true });
+
+      copyDirRecursive(srcDir, destDir);
+
+      expect(fs.existsSync(path.join(destDir, 'level1', 'level2', 'level3'))).toBe(true);
+      expect(fs.statSync(path.join(destDir, 'level1', 'level2', 'level3')).isDirectory()).toBe(true);
+    });
+
+    it('should handle mixed empty and non-empty nested directories', () => {
+      const srcDir = path.join(tempDir, 'src');
+      const destDir = path.join(tempDir, 'dest');
+      
+      fs.mkdirSync(path.join(srcDir, 'emptyDir'), { recursive: true });
+      fs.mkdirSync(path.join(srcDir, 'nonEmpty', 'nested'), { recursive: true });
+      fs.writeFileSync(path.join(srcDir, 'root.txt'), 'root content');
+      fs.writeFileSync(path.join(srcDir, 'nonEmpty', 'file.txt'), 'nested file');
+      fs.writeFileSync(path.join(srcDir, 'nonEmpty', 'nested', 'deep.txt'), 'deep content');
+
+      copyDirRecursive(srcDir, destDir);
+
+      expect(fs.existsSync(path.join(destDir, 'emptyDir'))).toBe(true);
+      expect(fs.existsSync(path.join(destDir, 'root.txt'))).toBe(true);
+      expect(fs.existsSync(path.join(destDir, 'nonEmpty', 'file.txt'))).toBe(true);
+      expect(fs.existsSync(path.join(destDir, 'nonEmpty', 'nested', 'deep.txt'))).toBe(true);
+    });
   });
 
   describe('getAllFiles', () => {
@@ -154,6 +238,106 @@ describe('file-extract Module', () => {
       expect(files).toContain(path.join(testDir, 'file0.txt'));
       expect(files).toContain(path.join(testDir, 'dir1', 'file1.txt'));
       expect(files.length).toBe(2);
+    });
+
+    it('should return empty array for directory with only subdirectories', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      fs.mkdirSync(path.join(testDir, 'dir1'), { recursive: true });
+      fs.mkdirSync(path.join(testDir, 'dir2', 'nested'), { recursive: true });
+
+      const files = getAllFiles(testDir);
+
+      expect(files).toEqual([]);
+    });
+
+    it('should handle deeply nested empty directories', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      fs.mkdirSync(path.join(testDir, 'a', 'b', 'c', 'd', 'e', 'f', 'g'), { recursive: true });
+
+      const files = getAllFiles(testDir);
+
+      expect(files).toEqual([]);
+    });
+
+    it('should handle files with special characters in names', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      fs.mkdirSync(testDir);
+      const specialFiles = [
+        'file with spaces.txt',
+        'file-with-dashes.txt',
+        'file_with_underscores.txt',
+        'file.with.dots.txt',
+        'file-with-multiple...dots.txt',
+        '123file-starting-with-numbers.txt',
+        'UPPERCASE.TXT',
+        'MixedCase.File.txt',
+        'file-with-dash-and-spaces test.txt',
+        'very-long-file-name-that-exceeds-typical-limits-and-tests-how-the-system-handles-extremely-long-path-components-with-multiple-dots-and-spaces-and-special-characters.txt',
+      ];
+      
+      specialFiles.forEach(fileName => {
+        fs.writeFileSync(path.join(testDir, fileName), `content of ${fileName}`);
+      });
+
+      const files = getAllFiles(testDir);
+
+      expect(files.length).toBe(specialFiles.length);
+      specialFiles.forEach(fileName => {
+        expect(files).toContain(path.join(testDir, fileName));
+      });
+    });
+
+    it('should handle large number of files', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      fs.mkdirSync(testDir);
+      const fileCount = 500;
+      
+      for (let i = 0; i < fileCount; i++) {
+        fs.writeFileSync(path.join(testDir, `file-${i}.txt`), `content ${i}`);
+      }
+
+      const files = getAllFiles(testDir);
+
+      expect(files.length).toBe(fileCount);
+    });
+
+    it('should handle large number of files in nested directories', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      const dirs = ['dir1', 'dir2', 'dir3'];
+      const filesPerDir = 100;
+      
+      dirs.forEach(dir => {
+        fs.mkdirSync(path.join(testDir, dir), { recursive: true });
+        for (let i = 0; i < filesPerDir; i++) {
+          fs.writeFileSync(path.join(testDir, dir, `file-${i}.txt`), `content ${i}`);
+        }
+      });
+
+      const files = getAllFiles(testDir);
+
+      expect(files.length).toBe(dirs.length * filesPerDir);
+    });
+
+    it('should handle files with similar names in different directories', () => {
+      const testDir = path.join(tempDir, 'test');
+      
+      fs.mkdirSync(path.join(testDir, 'dir1'), { recursive: true });
+      fs.mkdirSync(path.join(testDir, 'dir2'), { recursive: true });
+      fs.writeFileSync(path.join(testDir, 'same-name.txt'), 'root');
+      fs.writeFileSync(path.join(testDir, 'dir1', 'same-name.txt'), 'dir1');
+      fs.writeFileSync(path.join(testDir, 'dir2', 'same-name.txt'), 'dir2');
+
+      const files = getAllFiles(testDir);
+
+      expect(files.length).toBe(3);
+      expect(files).toContain(path.join(testDir, 'same-name.txt'));
+      expect(files).toContain(path.join(testDir, 'dir1', 'same-name.txt'));
+      expect(files).toContain(path.join(testDir, 'dir2', 'same-name.txt'));
     });
   });
 });
