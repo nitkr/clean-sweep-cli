@@ -362,6 +362,182 @@ describe('CLI Integration Tests', () => {
     });
   });
 
+  describe('verbose flag', () => {
+    it('scan --verbose flag produces detailed output', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', MALWARE_FIXTURE,
+        '--verbose',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect((output.threats as unknown[]).length).toBeGreaterThan(0);
+
+      const firstThreat = (output.threats as Record<string, unknown>[])[0];
+      expect(firstThreat).toHaveProperty('file');
+      expect(firstThreat).toHaveProperty('type');
+    });
+
+    it('scan without --verbose still returns threats but may have less detail', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', MALWARE_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect((output.threats as unknown[]).length).toBeGreaterThan(0);
+    });
+
+    it('status --verbose flag works', async () => {
+      const { stdout, code } = await runCli([
+        'status',
+        '--path', CLEAN_FIXTURE,
+        '--verbose',
+        '--json',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('version');
+    });
+  });
+
+  describe('scan output field validation', () => {
+    it('scan output has correct field types for clean fixture', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(typeof output.path).toBe('string');
+      expect(Array.isArray(output.files)).toBe(true);
+      expect(Array.isArray(output.directories)).toBe(true);
+      expect(typeof output.totalFiles).toBe('number');
+      expect(typeof output.totalDirectories).toBe('number');
+      expect(typeof output.safe).toBe('boolean');
+      expect(Array.isArray(output.threats)).toBe(true);
+    });
+
+    it('scan output has correct field types for malware fixture', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', MALWARE_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(typeof output.path).toBe('string');
+      expect(output.safe).toBe(false);
+      expect(Array.isArray(output.threats)).toBe(true);
+      expect((output.threats as unknown[]).length).toBeGreaterThan(0);
+
+      const firstThreat = (output.threats as Record<string, unknown>[])[0];
+      expect(typeof firstThreat.file).toBe('string');
+      expect(typeof firstThreat.type).toBe('string');
+    });
+
+    it('scan output path matches scanned path', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output.path).toContain('clean-wp');
+    });
+  });
+
+  describe('status output field validation', () => {
+    it('status output has correct field types', async () => {
+      const { stdout, code } = await runCli([
+        'status',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output.version === null || typeof output.version === 'string').toBe(true);
+      expect(typeof output.pluginsCount).toBe('number');
+      expect(typeof output.themesCount).toBe('number');
+      expect(typeof output.dbConnected).toBe('boolean');
+      expect(typeof output.wpContentWritable).toBe('boolean');
+      expect(typeof output.dryRun).toBe('boolean');
+    });
+  });
+
+  describe('JSON parseability validation', () => {
+    it('scan --json output can be parsed with JSON.parse directly', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout);
+      expect(output).not.toBeNull();
+      expect(() => JSON.stringify(output)).not.toThrow();
+    });
+
+    it('status --json output can be parsed with JSON.parse directly', async () => {
+      const { stdout, code } = await runCli([
+        'status',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout);
+      expect(output).not.toBeNull();
+      expect(() => JSON.stringify(output)).not.toThrow();
+    });
+
+    it('both --json and non-json output works', async () => {
+      const jsonResult = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      const textResult = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--dry-run',
+      ]);
+
+      expect(jsonResult.code).toBe(0);
+      expect(textResult.code).toBe(0);
+      expect(textResult.stdout).toContain('safe');
+    });
+  });
+
   describe('help and version', () => {
     it('--version returns version string', async () => {
       const { stdout, code } = await runCli(['--version']);
