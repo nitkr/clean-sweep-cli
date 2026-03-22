@@ -71,6 +71,87 @@ describe('WordPress File Detector', () => {
       expect(result.count).toBe(0);
       expect(result.files).toHaveLength(0);
     });
+
+    it('should return 0 unknown when only core files exist', async () => {
+      const coreOnlyDir = path.join(__dirname, 'temp-core-only');
+      fs.mkdirSync(coreOnlyDir, { recursive: true });
+      fs.mkdirSync(path.join(coreOnlyDir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(coreOnlyDir, 'wp-includes'), { recursive: true });
+      fs.writeFileSync(path.join(coreOnlyDir, 'wp-admin', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(coreOnlyDir, 'wp-includes', 'functions.php'), '<?php');
+      fs.writeFileSync(path.join(coreOnlyDir, 'wp-login.php'), '<?php');
+      fs.writeFileSync(path.join(coreOnlyDir, 'wp-config.php'), '<?php');
+      fs.writeFileSync(path.join(coreOnlyDir, 'index.php'), '<?php');
+
+      const result = await findUnknownFiles(coreOnlyDir);
+      fs.rmSync(coreOnlyDir, { recursive: true, force: true });
+      expect(result.count).toBe(0);
+      expect(result.files).toHaveLength(0);
+    });
+
+    it('should handle mixed core and non-core files correctly', async () => {
+      const mixedDir = path.join(__dirname, 'temp-mixed');
+      fs.mkdirSync(mixedDir, { recursive: true });
+      fs.mkdirSync(path.join(mixedDir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(mixedDir, 'wp-includes'), { recursive: true });
+      fs.mkdirSync(path.join(mixedDir, 'themes'), { recursive: true });
+      fs.mkdirSync(path.join(mixedDir, 'plugins'), { recursive: true });
+
+      fs.writeFileSync(path.join(mixedDir, 'wp-admin', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'wp-includes', 'functions.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'wp-login.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'wp-config.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'index.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'custom.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'themes', 'mytheme.php'), '<?php');
+      fs.writeFileSync(path.join(mixedDir, 'plugins', 'myplugin.php'), '<?php');
+
+      const result = await findUnknownFiles(mixedDir);
+      fs.rmSync(mixedDir, { recursive: true, force: true });
+      expect(result.count).toBe(3);
+      expect(result.files).toContain('custom.php');
+      expect(result.files).toContain('plugins/myplugin.php');
+      expect(result.files).toContain('themes/mytheme.php');
+      expect(result.files).not.toContain('wp-admin/index.php');
+      expect(result.files).not.toContain('wp-includes/functions.php');
+    });
+
+    it('should handle custom ignore patterns correctly', async () => {
+      const customIgnoreDir = path.join(__dirname, 'temp-custom-ignore');
+      fs.mkdirSync(customIgnoreDir, { recursive: true });
+      fs.mkdirSync(path.join(customIgnoreDir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(customIgnoreDir, 'wp-includes'), { recursive: true });
+      fs.mkdirSync(path.join(customIgnoreDir, 'cache'), { recursive: true });
+      fs.mkdirSync(path.join(customIgnoreDir, 'temp'), { recursive: true });
+
+      fs.writeFileSync(path.join(customIgnoreDir, 'wp-admin', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(customIgnoreDir, 'wp-includes', 'functions.php'), '<?php');
+      fs.writeFileSync(path.join(customIgnoreDir, 'custom.php'), '<?php');
+      fs.writeFileSync(path.join(customIgnoreDir, 'cache', 'cached.php'), '<?php');
+      fs.writeFileSync(path.join(customIgnoreDir, 'temp', 'tmp.php'), '<?php');
+
+      const result = await findUnknownFiles(customIgnoreDir, ['**/cache/**', '**/temp/**']);
+      fs.rmSync(customIgnoreDir, { recursive: true, force: true });
+      expect(result.files).toContain('custom.php');
+      expect(result.files).not.toContain('cache/cached.php');
+      expect(result.files).not.toContain('temp/tmp.php');
+    });
+
+    it('should handle deeply nested non-core files', async () => {
+      const nestedDir = path.join(__dirname, 'temp-nested');
+      fs.mkdirSync(nestedDir, { recursive: true });
+      fs.mkdirSync(path.join(nestedDir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(nestedDir, 'wp-includes'), { recursive: true });
+      fs.mkdirSync(path.join(nestedDir, 'a', 'b', 'c', 'd'), { recursive: true });
+
+      fs.writeFileSync(path.join(nestedDir, 'wp-admin', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(nestedDir, 'wp-includes', 'functions.php'), '<?php');
+      fs.writeFileSync(path.join(nestedDir, 'a', 'b', 'c', 'd', 'deep.php'), '<?php');
+
+      const result = await findUnknownFiles(nestedDir);
+      fs.rmSync(nestedDir, { recursive: true, force: true });
+      expect(result.files).toContain('a/b/c/d/deep.php');
+    });
   });
 
   describe('isWordPressInstallation', () => {
@@ -148,6 +229,64 @@ describe('WordPress File Detector', () => {
     it('should return false for empty directory', () => {
       const dir = path.join(__dirname, 'temp-empty-dir');
       fs.mkdirSync(dir, { recursive: true });
+
+      const result = isWordPressInstallation(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only wp-content exists', () => {
+      const dir = path.join(__dirname, 'temp-only-wpcontent');
+      fs.mkdirSync(path.join(dir, 'wp-content', 'themes', 'mytheme'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'wp-content', 'themes', 'mytheme', 'style.css'), 'body {}');
+
+      const result = isWordPressInstallation(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only wp-admin exists', () => {
+      const dir = path.join(__dirname, 'temp-only-wpadmin');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-admin'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'wp-admin', 'index.php'), '<?php');
+
+      const result = isWordPressInstallation(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only wp-includes exists', () => {
+      const dir = path.join(__dirname, 'temp-only-wpincludes');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-includes'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'wp-includes', 'functions.php'), '<?php');
+
+      const result = isWordPressInstallation(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only some required files exist', () => {
+      const dir = path.join(__dirname, 'temp-partial-files');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-includes'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'wp-admin', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(dir, 'wp-includes', 'functions.php'), '<?php');
+
+      const result = isWordPressInstallation(dir);
+      fs.rmSync(dir, { recursive: true, force: true });
+      expect(result).toBe(false);
+    });
+
+    it('should return false when directories exist but required files missing', () => {
+      const dir = path.join(__dirname, 'temp-dirs-no-files');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-admin'), { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-includes'), { recursive: true });
+      fs.mkdirSync(path.join(dir, 'wp-content'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'index.php'), '<?php');
 
       const result = isWordPressInstallation(dir);
       fs.rmSync(dir, { recursive: true, force: true });
