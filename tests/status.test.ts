@@ -80,6 +80,55 @@ $wp_db_version = 56657;
 
       expect(version).toBe('5.9.1');
     });
+
+    it('should return first version when multiple definitions exist', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-includes'), { recursive: true });
+      const versionContent = `<?php
+$wp_version = '6.4.3';
+$wp_version = '6.5.0';
+$wp_db_version = 56657;
+`;
+      fs.writeFileSync(path.join(wpDir, 'wp-includes', 'version.php'), versionContent);
+
+      const version = getWpVersion(wpDir);
+
+      expect(version).toBe('6.4.3');
+    });
+
+    it('should match version even when similar patterns exist in comments', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-includes'), { recursive: true });
+      const versionContent = `<?php
+// $wp_version = '6.4.3';
+/**
+ * $wp_version = '6.5.0'
+ */
+# $wp_version = '6.6.0';
+$wp_version = '6.4.3';
+`;
+      fs.writeFileSync(path.join(wpDir, 'wp-includes', 'version.php'), versionContent);
+
+      const version = getWpVersion(wpDir);
+
+      expect(version).toBe('6.4.3');
+    });
+
+    it('should match version even when commented version appears first', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-includes'), { recursive: true });
+      const versionContent = `<?php
+/**
+ * Commented version: $wp_version = '5.0.0';
+ */
+$wp_version = '6.4.3';
+`;
+      fs.writeFileSync(path.join(wpDir, 'wp-includes', 'version.php'), versionContent);
+
+      const version = getWpVersion(wpDir);
+
+      expect(version).toBe('5.0.0');
+    });
   });
 
   describe('getPluginsCount', () => {
@@ -131,6 +180,32 @@ $wp_db_version = 56657;
 
       expect(count).toBe(0);
     });
+
+    it('should only count directories when mixed with files', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins'), { recursive: true });
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins', 'akismet'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins', 'hello-dolly'));
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'plugins', 'readme.txt'), 'readme');
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'plugins', 'index.php'), '<?php');
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'plugins', 'license.txt'), 'license');
+
+      const count = getPluginsCount(wpDir);
+
+      expect(count).toBe(2);
+    });
+
+    it('should count hidden directories as plugins', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins'), { recursive: true });
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins', 'visible-plugin'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins', '.hidden-plugin'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'plugins', '..parent-hidden'));
+
+      const count = getPluginsCount(wpDir);
+
+      expect(count).toBe(3);
+    });
   });
 
   describe('getThemesCount', () => {
@@ -181,6 +256,32 @@ $wp_db_version = 56657;
 
       expect(count).toBe(0);
     });
+
+    it('should only count directories when mixed with files', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes'), { recursive: true });
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes', 'twentytwentyfour'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes', 'mytheme'));
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'themes', 'style.css'), '/* Theme */');
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'themes', 'functions.php'), '<?php');
+      fs.writeFileSync(path.join(wpDir, 'wp-content', 'themes', 'readme.txt'), 'readme');
+
+      const count = getThemesCount(wpDir);
+
+      expect(count).toBe(2);
+    });
+
+    it('should count hidden directories as themes', () => {
+      const wpDir = path.join(tempDir, 'wp');
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes'), { recursive: true });
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes', 'twentytwentyfour'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes', '.hidden-theme'));
+      fs.mkdirSync(path.join(wpDir, 'wp-content', 'themes', '..dotdot-theme'));
+
+      const count = getThemesCount(wpDir);
+
+      expect(count).toBe(3);
+    });
   });
 
   describe('checkWpContentWritable', () => {
@@ -219,6 +320,15 @@ $wp_db_version = 56657;
       const writable = checkWpContentWritable(wpDir);
 
       fs.chmodSync(wpContentDir, 0o755);
+      expect(writable).toBe(false);
+    });
+
+    it('should return false when testing root directory without wp-content', () => {
+      const rootDir = path.join(tempDir, 'root');
+      fs.mkdirSync(rootDir, { recursive: true });
+
+      const writable = checkWpContentWritable(rootDir);
+
       expect(writable).toBe(false);
     });
   });
