@@ -379,4 +379,205 @@ describe('CLI Integration Tests', () => {
       expect(stdout).toContain('status');
     });
   });
+
+  describe('db:scan error handling', () => {
+    it('returns error when wp-config.php is missing and no db params provided', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+      expect(output.error).toContain('wp-config.php');
+    });
+
+    it('returns error when database credentials are incomplete', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--db-host', 'localhost',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+    });
+
+    it('succeeds with database parameters provided in dry-run mode', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--db-host', 'localhost',
+        '--db-name', 'testdb',
+        '--db-user', 'testuser',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('"success": true');
+    }, 30000);
+  });
+
+  describe('file:extract error handling', () => {
+    it('returns error when zip path is not provided', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('ZIP');
+    });
+
+    it('returns error when WordPress path does not exist', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', '/non/existent/path',
+        '--zip', '/some/file.zip',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('does not exist');
+    });
+
+    it('returns error when ZIP file does not exist', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', CLEAN_FIXTURE,
+        '--zip', '/non/existent/file.zip',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('does not exist');
+    });
+  });
+
+  describe('plugin:reinstall error handling', () => {
+    it('returns error when plugin slug is not provided', async () => {
+      const { stdout, code } = await runCli([
+        'plugin:reinstall',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('Plugin slug');
+    });
+
+    it('returns error for invalid plugin slug', async () => {
+      const { stdout, code } = await runCli([
+        'plugin:reinstall',
+        '--path', CLEAN_FIXTURE,
+        '--plugin', 'nonexistent-plugin-slug-12345',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+    }, 30000);
+  });
+
+  describe('core:repair error handling', () => {
+    it('returns error when path does not exist', async () => {
+      const { stdout, code } = await runCli([
+        'core:repair',
+        '--path', '/non/existent/path',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+    });
+
+    it('returns error when path is not a directory', async () => {
+      const notADir = path.join(__dirname, '..', 'package.json');
+
+      const { stdout, code } = await runCli([
+        'core:repair',
+        '--path', notADir,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+    });
+  });
+
+  describe('cleanup error handling', () => {
+    it('returns error and exits when --force is not provided', async () => {
+      const { stdout, code } = await runCli([
+        'cleanup',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('--force');
+    });
+
+    it('returns error when path does not exist', async () => {
+      const { stdout, code } = await runCli([
+        'cleanup',
+        '--path', '/non/existent/path',
+        '--force',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+      expect(output.error).toBe('Path does not exist');
+    });
+
+    it('returns success when --force is provided', async () => {
+      const { stdout, code } = await runCli([
+        'cleanup',
+        '--path', CLEAN_FIXTURE,
+        '--force',
+        '--json',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+    });
+  });
 });
