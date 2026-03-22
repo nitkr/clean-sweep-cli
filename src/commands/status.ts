@@ -28,7 +28,7 @@ function formatOutput(data: unknown, useJson: boolean): void {
   }
 }
 
-function getWpVersion(wpPath: string): string | null {
+export function getWpVersion(wpPath: string): string | null {
   const versionFile = path.join(wpPath, 'wp-includes', 'version.php');
   if (!fs.existsSync(versionFile)) {
     return null;
@@ -43,7 +43,7 @@ function getWpVersion(wpPath: string): string | null {
   }
 }
 
-function getPluginsCount(wpPath: string): number {
+export function getPluginsCount(wpPath: string): number {
   const pluginsDir = path.join(wpPath, 'wp-content', 'plugins');
   if (!fs.existsSync(pluginsDir)) {
     return 0;
@@ -57,7 +57,7 @@ function getPluginsCount(wpPath: string): number {
   }
 }
 
-function getThemesCount(wpPath: string): number {
+export function getThemesCount(wpPath: string): number {
   const themesDir = path.join(wpPath, 'wp-content', 'themes');
   if (!fs.existsSync(themesDir)) {
     return 0;
@@ -71,7 +71,7 @@ function getThemesCount(wpPath: string): number {
   }
 }
 
-function checkWpContentWritable(wpPath: string): boolean {
+export function checkWpContentWritable(wpPath: string): boolean {
   const wpContentDir = path.join(wpPath, 'wp-content');
   if (!fs.existsSync(wpContentDir)) {
     return false;
@@ -87,7 +87,7 @@ function checkWpContentWritable(wpPath: string): boolean {
   }
 }
 
-function checkDbConnection(wpPath: string): boolean {
+export function checkDbConnection(wpPath: string): boolean {
   const wpConfig = path.join(wpPath, 'wp-config.php');
   if (!fs.existsSync(wpConfig)) {
     return false;
@@ -113,7 +113,7 @@ function checkDbConnection(wpPath: string): boolean {
   }
 }
 
-function getLastCoreUpdate(wpPath: string): string | null {
+export function getLastCoreUpdate(wpPath: string): string | null {
   const wpDir = path.join(wpPath, 'wp-admin', 'includes', 'update.php');
   if (!fs.existsSync(wpDir)) {
     return null;
