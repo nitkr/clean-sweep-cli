@@ -119,6 +119,107 @@ $table_prefix = 'wp_';
       expect(result).not.toBeNull();
       expect(result?.pass).toBe('');
     });
+
+    it('should handle config with comments', () => {
+      const wpConfigContent = `<?php
+// This is a comment
+define('DB_NAME', 'wordpress_db'); // database name
+define('DB_USER', 'wp_user');
+/* Multi-line
+   comment */
+define('DB_PASSWORD', 'wp_pass');
+define('DB_HOST', 'localhost');
+$table_prefix = 'wp_';
+`;
+
+      const configPath = path.join(tempDir, 'wp-config-comments.php');
+      fs.writeFileSync(configPath, wpConfigContent);
+
+      const result = parseWpConfig(configPath);
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe('wordpress_db');
+      expect(result?.user).toBe('wp_user');
+      expect(result?.pass).toBe('wp_pass');
+      expect(result?.host).toBe('localhost');
+      expect(result?.prefix).toBe('wp_');
+    });
+
+    it('should handle config with different spacing and formatting', () => {
+      const wpConfigContent = `<?php
+define(  'DB_NAME'  ,  'wordpress_db'  );
+define('DB_USER','wp_user');
+define('DB_PASSWORD', 'wp_pass');
+define( 'DB_HOST' , 'localhost' );
+$table_prefix = 'wp_';
+`;
+
+      const configPath = path.join(tempDir, 'wp-config-spacing.php');
+      fs.writeFileSync(configPath, wpConfigContent);
+
+      const result = parseWpConfig(configPath);
+
+      expect(result).not.toBeNull();
+      expect(result?.name).toBe('wordpress_db');
+      expect(result?.user).toBe('wp_user');
+      expect(result?.pass).toBe('wp_pass');
+      expect(result?.host).toBe('localhost');
+      expect(result?.prefix).toBe('wp_');
+    });
+
+    it('should handle config with custom port in DB_HOST', () => {
+      const wpConfigContent = `<?php
+define('DB_NAME', 'wordpress_db');
+define('DB_USER', 'wp_user');
+define('DB_PASSWORD', 'wp_pass');
+define('DB_HOST', 'localhost:3306');
+$table_prefix = 'wp_';
+`;
+
+      const configPath = path.join(tempDir, 'wp-config-port.php');
+      fs.writeFileSync(configPath, wpConfigContent);
+
+      const result = parseWpConfig(configPath);
+
+      expect(result).not.toBeNull();
+      expect(result?.host).toBe('localhost:3306');
+    });
+
+    it('should handle config with custom table prefix', () => {
+      const wpConfigContent = `<?php
+define('DB_NAME', 'wordpress_db');
+define('DB_USER', 'wp_user');
+define('DB_PASSWORD', 'wp_pass');
+define('DB_HOST', 'localhost');
+$table_prefix = 'custom_prefix_';
+`;
+
+      const configPath = path.join(tempDir, 'wp-config-custom-prefix.php');
+      fs.writeFileSync(configPath, wpConfigContent);
+
+      const result = parseWpConfig(configPath);
+
+      expect(result).not.toBeNull();
+      expect(result?.prefix).toBe('custom_prefix_');
+    });
+
+    it('should handle config with numeric values in quotes', () => {
+      const wpConfigContent = `<?php
+define('DB_NAME', 'wordpress_db');
+define('DB_USER', 'wp_user');
+define('DB_PASSWORD', '12345');
+define('DB_HOST', 'localhost');
+$table_prefix = 'wp_';
+`;
+
+      const configPath = path.join(tempDir, 'wp-config-numeric.php');
+      fs.writeFileSync(configPath, wpConfigContent);
+
+      const result = parseWpConfig(configPath);
+
+      expect(result).not.toBeNull();
+      expect(result?.pass).toBe('12345');
+    });
   });
 
   describe('parseMysqlOutput', () => {
@@ -181,6 +282,64 @@ $table_prefix = 'wp_';
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ id: 1, content: 'Content One' });
       expect(result[1]).toEqual({ id: 2, content: 'Content Two' });
+    });
+
+    it('should handle multiple rows', () => {
+      const output = 'ID\tpost_content\n1\tFirst row\n2\tSecond row\n3\tThird row\n4\tFourth row\n5\tFifth row';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(5);
+      expect(result[0]).toEqual({ id: 1, content: 'First row' });
+      expect(result[1]).toEqual({ id: 2, content: 'Second row' });
+      expect(result[2]).toEqual({ id: 3, content: 'Third row' });
+      expect(result[3]).toEqual({ id: 4, content: 'Fourth row' });
+      expect(result[4]).toEqual({ id: 5, content: 'Fifth row' });
+    });
+
+    it('should handle rows with special characters', () => {
+      const output = 'ID\tpost_content\n1\t<script>alert(1)</script>\n2\tSome "quoted" text\n3\tText with <iframe>';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({ id: 1, content: '<script>alert(1)</script>' });
+      expect(result[1]).toEqual({ id: 2, content: 'Some "quoted" text' });
+      expect(result[2]).toEqual({ id: 3, content: 'Text with <iframe>' });
+    });
+
+    it('should handle malformed output with missing columns', () => {
+      const output = 'ID\tpost_content\n1\tHas content\n2';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ id: 1, content: 'Has content' });
+    });
+
+    it('should handle malformed output with extra newlines', () => {
+      const output = '\n\nID\tpost_content\n\n1\tSome content\n\n2\tMore content\n\n';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ id: 1, content: 'Some content' });
+      expect(result[1]).toEqual({ id: 2, content: 'More content' });
+    });
+
+    it('should handle output with mixed tab and space content', () => {
+      const output = 'ID\tpost_content\n1\tText with   spaces\n2\tNormal text';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ id: 1, content: 'Text with   spaces' });
+      expect(result[1]).toEqual({ id: 2, content: 'Normal text' });
+    });
+
+    it('should handle output with unicode characters', () => {
+      const output = 'ID\tpost_content\n1\tHéllo wörld\n2\t日本語テスト\n3\tEmoji 😀 test';
+      const result = parseMysqlOutput(output);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toEqual({ id: 1, content: 'Héllo wörld' });
+      expect(result[1]).toEqual({ id: 2, content: '日本語テスト' });
+      expect(result[2]).toEqual({ id: 3, content: 'Emoji 😀 test' });
     });
   });
 });
