@@ -7,6 +7,7 @@ import { registerPluginReinstallCommand } from './commands/plugin-reinstall';
 import { registerFileExtractCommand } from './commands/file-extract';
 import { registerDbScanCommand } from './commands/db-scan';
 import { registerCleanupCommand } from './commands/cleanup';
+import { registerStatusCommand } from './commands/status';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -14,6 +15,7 @@ export interface CliOptions {
   json: boolean;
   path: string;
   verbose: boolean;
+  checkVulnerabilities: boolean;
 }
 
 const program = new Command();
@@ -35,7 +37,8 @@ program
   .option('--force', 'Skip confirmation prompts', false)
   .option('--json', 'Output results as JSON', false)
   .option('--path <path>', 'Target path to operate on', process.cwd())
-  .option('--verbose', 'Show detailed threat information', false);
+  .option('--verbose', 'Show detailed threat information', false)
+  .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false);
 
 registerScanCommand(program, getOpts);
 registerCoreRepairCommand(program, getOpts);
@@ -43,6 +46,7 @@ registerPluginReinstallCommand(program, getOpts);
 registerFileExtractCommand(program, getOpts);
 registerDbScanCommand(program, getOpts);
 registerCleanupCommand(program, getOpts);
+registerStatusCommand(program, getOpts);
 
 program.parse(process.argv);
 

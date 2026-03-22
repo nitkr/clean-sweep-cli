@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import fg from 'fast-glob';
 import winston from 'winston';
 import { detectThreats, ScanResult } from '../malware-scanner';
+import { scanVulnerabilities, Vulnerability } from '../vulnerability-scanner';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -17,6 +18,7 @@ interface CliOptions {
   json: boolean;
   path: string;
   verbose: boolean;
+  checkVulnerabilities: boolean;
 }
 
 function formatOutput(data: unknown, useJson: boolean): void {
@@ -74,6 +76,7 @@ export function registerScanCommand(
     .description('Scan directory for files and directories')
     .option('--path <path>', 'Directory to scan', getOpts().path)
     .option('--verbose', 'Show detailed threat information', false)
+    .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
       const targetPath = cmdOptions.path || opts.path;
@@ -102,6 +105,24 @@ export function registerScanCommand(
           dryRun: opts.dryRun,
         });
 
+        const checkVulns = opts.checkVulnerabilities || cmdOptions.checkVulnerabilities;
+        let vulnerabilities: Vulnerability[] = [];
+
+        if (checkVulns) {
+          console.log('Checking for vulnerabilities...');
+          const vulnResult = await scanVulnerabilities(normalizedPath);
+          vulnerabilities = vulnResult.vulnerabilities;
+
+          if (!opts.json && !cmdOptions.json) {
+            if (vulnResult.wordpress) {
+              console.log(`  WordPress: ${vulnResult.wordpress}`);
+            }
+            if (vulnResult.plugins.length > 0) {
+              console.log(`  Plugins: ${vulnResult.plugins.length} found`);
+            }
+          }
+        }
+
         if (!opts.json && !cmdOptions.json && result.threats.length > 0) {
           console.log(`\nFound ${result.threats.length} potential threat(s):`);
           for (const threat of result.threats) {
@@ -114,7 +135,19 @@ export function registerScanCommand(
           console.log(`\nScan result: ${result.safe ? 'SAFE' : 'UNSAFE'}`);
         }
 
-        formatOutput(result, opts.json || cmdOptions.json);
+        if (!opts.json && !cmdOptions.json && vulnerabilities.length > 0) {
+          console.log(`\nFound ${vulnerabilities.length} known vulnerability(ies):`);
+          for (const vuln of vulnerabilities) {
+            console.log(`  - [${vuln.severity}] ${vuln.component} ${vuln.version}: ${vuln.title} (${vuln.cve})`);
+          }
+        }
+
+        const output = {
+          ...result,
+          ...(checkVulns && { vulnerabilities }),
+        };
+
+        formatOutput(output, opts.json || cmdOptions.json);
       } catch (err) {
         const error = { error: 'Scan failed', message: String(err) };
         formatOutput(error, opts.json || cmdOptions.json);
