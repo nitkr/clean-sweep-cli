@@ -20,9 +20,12 @@ export function createBackup(targetPath: string): BackupResult {
   for (const entry of entries) {
     const srcPath = path.join(targetPath, entry);
     
-    if (entry === 'wp-content' || preserveFiles.includes(entry)) {
+    if (entry === 'wp-content') {
       const destPath = path.join(backupDir, entry);
       copyRecursiveSync(srcPath, destPath);
+      filesBackedUp++;
+    } else if (preserveFiles.includes(entry)) {
+      fs.copyFileSync(srcPath, path.join(backupDir, entry));
       filesBackedUp++;
     } else {
       const stat = fs.statSync(srcPath);
