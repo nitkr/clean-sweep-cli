@@ -19,7 +19,7 @@ function formatOutput(data: unknown, useJson: boolean): void {
   }
 }
 
-function copyDirRecursive(src: string, dest: string): void {
+export function copyDirRecursive(src: string, dest: string): void {
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src);
   for (const entry of entries) {
@@ -34,7 +34,7 @@ function copyDirRecursive(src: string, dest: string): void {
   }
 }
 
-function getAllFiles(dir: string): string[] {
+export function getAllFiles(dir: string): string[] {
   const files: string[] = [];
   const entries = fs.readdirSync(dir);
   for (const entry of entries) {
