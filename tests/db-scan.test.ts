@@ -3,6 +3,47 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { parseWpConfig, parseMysqlOutput } from '../src/commands/db-scan';
 
+const DB_SUSPICIOUS_PATTERNS = [
+  { pattern: /eval\s*\(/gi, type: 'eval_statement' },
+  { pattern: /base64_decode\s*\(/gi, type: 'base64_decode' },
+  { pattern: /base64_encode\s*\(/gi, type: 'base64_encode' },
+  { pattern: /<iframe/gi, type: 'iframe_tag' },
+  { pattern: /<script/gi, type: 'script_tag' },
+  { pattern: /javascript:/gi, type: 'javascript_protocol' },
+  { pattern: /on(load|error|click|mouse)/gi, type: 'event_handler' },
+  { pattern: /wp-embed\.php/gi, type: 'wp_embed' },
+  { pattern: /\.xyz|\.top|\.gq|\.tk|\.ml|\.cf|\.ga/gi, type: 'suspicious_tld' },
+  { pattern: /(?:https?:\/\/)?[a-z0-9-]+\.(?:xyz|top|gq|tk|ml|cf|ga)(?:\/|$)/gi, type: 'suspicious_domain' },
+  { pattern: /\$_(GET|POST|REQUEST)\[/gi, type: 'user_input_access' },
+  { pattern: /shell_exec|system\(|exec\(|passthru\(/gi, type: 'shell_command' },
+  { pattern: /preg_replace.*\/e/gi, type: 'preg_replace_eval' },
+  { pattern: /gzinflate\s*\(/gi, type: 'gzinflate' },
+  { pattern: /str_rot13\s*\(/gi, type: 'str_rot13' },
+  { pattern: /chr\s*\(\s*\d+\s*\)\s*\./gi, type: 'char_obfuscation' },
+  { pattern: /assert\s*\(/gi, type: 'assert_statement' },
+  { pattern: /preg_replace\s*\(/gi, type: 'preg_replace' },
+  { pattern: /create_function\s*\(/gi, type: 'create_function' },
+  { pattern: /call_user_func\s*\(/gi, type: 'call_user_func' },
+  { pattern: /array_map\s*\([^,]+,\s*/gi, type: 'array_map_callable' },
+  { pattern: /\.xyz(?:\/|$|\?)/gi, type: 'xyz_domain' },
+  { pattern: /\.top(?:\/|$|\?)/gi, type: 'top_domain' },
+  { pattern: /\.work(?:\/|$|\?)/gi, type: 'work_domain' },
+  { pattern: /\.click(?:\/|$|\?)/gi, type: 'click_domain' },
+  { pattern: /urlencode\s*\(/gi, type: 'urlencode' },
+  { pattern: /rawurlencode\s*\(/gi, type: 'rawurlencode' },
+];
+
+function findMatchingPatterns(content: string): { type: string; pattern: RegExp }[] {
+  const matches: { type: string; pattern: RegExp }[] = [];
+  for (const { pattern, type } of DB_SUSPICIOUS_PATTERNS) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    if (regex.test(content)) {
+      matches.push({ type, pattern });
+    }
+  }
+  return matches;
+}
+
 describe('db-scan', () => {
   describe('parseWpConfig', () => {
     const tempDir = fs.mkdtempSync('wp-config-test-');
@@ -340,6 +381,101 @@ $table_prefix = 'wp_';
       expect(result[0]).toEqual({ id: 1, content: 'Héllo wörld' });
       expect(result[1]).toEqual({ id: 2, content: '日本語テスト' });
       expect(result[2]).toEqual({ id: 3, content: 'Emoji 😀 test' });
+    });
+  });
+
+  describe('DB_SUSPICIOUS_PATTERNS', () => {
+    describe('PHP code patterns', () => {
+      it('should detect assert() function', () => {
+        const content = '<?php assert($_POST["cmd"]); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('assert_statement');
+      });
+
+      it('should detect preg_replace() function', () => {
+        const content = '<?php preg_replace("/pattern/", "replacement", $text); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('preg_replace');
+      });
+
+      it('should detect create_function() function', () => {
+        const content = '<?php $func = create_function("$a", "return $a * $a;"); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('create_function');
+      });
+
+      it('should detect call_user_func() function', () => {
+        const content = '<?php call_user_func("system", $_GET["cmd"]); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('call_user_func');
+      });
+
+      it('should detect array_map with callable', () => {
+        const content = '<?php array_map("system", $_GET["cmd"]); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('array_map_callable');
+      });
+    });
+
+    describe('suspicious URL patterns', () => {
+      it('should detect .xyz domains', () => {
+        const content = 'Visit http://malware.xyz/payload or https://evil.xyz/door';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('xyz_domain');
+      });
+
+      it('should detect .top domains', () => {
+        const content = 'Redirecting to http://suspicious.top/bad';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('top_domain');
+      });
+
+      it('should detect .work domains', () => {
+        const content = 'Loading from https://malicious.work/embed';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('work_domain');
+      });
+
+      it('should detect .click domains', () => {
+        const content = 'Track at http://phish.click/tracker';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('click_domain');
+      });
+    });
+
+    describe('encoded content patterns', () => {
+      it('should detect urlencode() function', () => {
+        const content = '<?php $encoded = urlencode($_GET["data"]); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('urlencode');
+      });
+
+      it('should detect rawurlencode() function', () => {
+        const content = '<?php $encoded = rawurlencode($userInput); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('rawurlencode');
+      });
+
+      it('should detect multiple patterns in same content', () => {
+        const content = '<?php eval(base64_decode(urlencode($_POST["x"]))); ?>';
+        const matches = findMatchingPatterns(content);
+        const types = matches.map(m => m.type);
+        expect(types).toContain('eval_statement');
+        expect(types).toContain('base64_decode');
+        expect(types).toContain('urlencode');
+        expect(types).toContain('user_input_access');
+      });
     });
   });
 });

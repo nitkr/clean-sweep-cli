@@ -59,6 +59,17 @@ const DB_SUSPICIOUS_PATTERNS = [
   { pattern: /gzinflate\s*\(/gi, type: 'gzinflate' },
   { pattern: /str_rot13\s*\(/gi, type: 'str_rot13' },
   { pattern: /chr\s*\(\s*\d+\s*\)\s*\./gi, type: 'char_obfuscation' },
+  { pattern: /assert\s*\(/gi, type: 'assert_statement' },
+  { pattern: /preg_replace\s*\(/gi, type: 'preg_replace' },
+  { pattern: /create_function\s*\(/gi, type: 'create_function' },
+  { pattern: /call_user_func\s*\(/gi, type: 'call_user_func' },
+  { pattern: /array_map\s*\([^,]+,\s*/gi, type: 'array_map_callable' },
+  { pattern: /\.xyz(?:\/|$|\?)/gi, type: 'xyz_domain' },
+  { pattern: /\.top(?:\/|$|\?)/gi, type: 'top_domain' },
+  { pattern: /\.work(?:\/|$|\?)/gi, type: 'work_domain' },
+  { pattern: /\.click(?:\/|$|\?)/gi, type: 'click_domain' },
+  { pattern: /urlencode\s*\(/gi, type: 'urlencode' },
+  { pattern: /rawurlencode\s*\(/gi, type: 'rawurlencode' },
 ];
 
 export function parseWpConfig(wpConfigPath: string): DbCredentials | null {
