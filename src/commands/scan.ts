@@ -5,6 +5,7 @@ import fg from 'fast-glob';
 import { detectThreats, ScanResult } from '../malware-scanner';
 import { scanVulnerabilities, Vulnerability } from '../vulnerability-scanner';
 import { checkWordPressIntegrity, IntegrityResult } from '../file-integrity';
+import { findUnknownFiles, UnknownFilesResult } from '../wp-file-detector';
 import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefaultReportPath } from '../logger';
 
 interface CliOptions {
@@ -15,6 +16,7 @@ interface CliOptions {
   verbose: boolean;
   checkVulnerabilities: boolean;
   checkIntegrity: boolean;
+  findUnknown: boolean;
   report: boolean;
   logLevel: string;
 }
@@ -109,6 +111,7 @@ export function registerScanCommand(
     .option('--verbose', 'Show detailed threat information', false)
     .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
     .option('--check-integrity', 'Check WordPress core file integrity', false)
+    .option('--find-unknown', 'Find unknown files not part of WordPress core', false)
     .option('--report', 'Save JSON report to file', false)
     .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
     .action(async (cmdOptions) => {
@@ -146,8 +149,10 @@ export function registerScanCommand(
 
         const checkVulns = opts.checkVulnerabilities || cmdOptions.checkVulnerabilities;
         const checkIntegrity = opts.checkIntegrity || cmdOptions.checkIntegrity;
+        const findUnknown = opts.findUnknown || cmdOptions.findUnknown;
         let vulnerabilities: Vulnerability[] = [];
         let integrity: IntegrityResult | undefined;
+        let unknownFiles: UnknownFilesResult | undefined;
 
         if (checkVulns) {
           logger.info('Checking for vulnerabilities...');
@@ -179,6 +184,27 @@ export function registerScanCommand(
             if (integrity.modifiedFiles.length > 0) {
               console.log('  Modified core files:');
               for (const file of integrity.modifiedFiles) {
+                console.log(`    - ${file}`);
+              }
+            }
+          }
+        }
+
+        if (findUnknown) {
+          logger.info('Finding unknown files...');
+          console.log('Finding unknown files...');
+          unknownFiles = await findUnknownFiles(normalizedPath);
+
+          if (!opts.json && !cmdOptions.json) {
+            console.log(`  Unknown files found: ${unknownFiles.count}`);
+            if (unknownFiles.files.length > 0 && unknownFiles.files.length <= 20) {
+              console.log('  Unknown files:');
+              for (const file of unknownFiles.files) {
+                console.log(`    - ${file}`);
+              }
+            } else if (unknownFiles.files.length > 20) {
+              console.log('  (Showing first 20 files)');
+              for (const file of unknownFiles.files.slice(0, 20)) {
                 console.log(`    - ${file}`);
               }
             }
@@ -217,6 +243,7 @@ export function registerScanCommand(
           ...result,
           ...(checkVulns && { vulnerabilities }),
           ...(checkIntegrity && { integrity }),
+          ...(findUnknown && { unknownFiles }),
           suggestions,
         };
 

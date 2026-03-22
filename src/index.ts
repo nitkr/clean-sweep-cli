@@ -17,6 +17,7 @@ export interface CliOptions {
   verbose: boolean;
   checkVulnerabilities: boolean;
   checkIntegrity: boolean;
+  findUnknown: boolean;
   report: boolean;
   logLevel: string;
 }
@@ -43,6 +44,7 @@ program
   .option('--verbose', 'Show detailed threat information', false)
   .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
   .option('--check-integrity', 'Check WordPress core file integrity', false)
+  .option('--find-unknown', 'Find unknown files not part of WordPress core', false)
   .option('--report', 'Save JSON report to file', false)
   .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info');
 
