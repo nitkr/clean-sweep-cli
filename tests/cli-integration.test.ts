@@ -137,6 +137,98 @@ describe('CLI Integration Tests', () => {
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('unknownFiles');
     });
+
+    it('scan --check-vulnerabilities returns empty vulnerabilities for fixture without WordPress', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--check-vulnerabilities',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('vulnerabilities');
+      expect(output.vulnerabilities).toEqual([]);
+    }, 30000);
+
+    it('scan --check-vulnerabilities returns vulnerabilities object when flag is set', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--check-vulnerabilities',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output.vulnerabilities).toBeDefined();
+      expect(Array.isArray(output.vulnerabilities)).toBe(true);
+    }, 30000);
+
+    it('scan --check-vulnerabilities includes plugins info when plugin vulnerability data exists', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--check-vulnerabilities',
+        '--check-integrity',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('vulnerabilities');
+      expect(output).toHaveProperty('integrity');
+      expect(output).toHaveProperty('suggestions');
+    }, 30000);
+
+    it('scan returns proper output structure with all optional flags combined', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--check-vulnerabilities',
+        '--check-integrity',
+        '--find-unknown',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('path');
+      expect(output).toHaveProperty('files');
+      expect(output).toHaveProperty('directories');
+      expect(output).toHaveProperty('totalFiles');
+      expect(output).toHaveProperty('totalDirectories');
+      expect(output).toHaveProperty('threats');
+      expect(output).toHaveProperty('safe');
+      expect(output).toHaveProperty('dryRun');
+      expect(output).toHaveProperty('vulnerabilities');
+      expect(output).toHaveProperty('integrity');
+      expect(output).toHaveProperty('unknownFiles');
+      expect(output).toHaveProperty('suggestions');
+    }, 30000);
+
+    it('scan --check-vulnerabilities handles non-existent path gracefully', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', '/non/existent/path',
+        '--json',
+        '--check-vulnerabilities',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+    }, 30000);
   });
 
   describe('status command', () => {
