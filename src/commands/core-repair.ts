@@ -1,0 +1,169 @@
+import { Command } from 'commander';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import fetch from 'node-fetch';
+import AdmZip from 'adm-zip';
+import winston from 'winston';
+import { createBackup, CoreRepairResult } from '../backup';
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [new winston.transports.Console()],
+});
+
+interface CliOptions {
+  dryRun: boolean;
+  force: boolean;
+  json: boolean;
+  path: string;
+  verbose: boolean;
+}
+
+function formatOutput(data: unknown, useJson: boolean): void {
+  if (useJson) {
+    console.log(JSON.stringify(data, null, 2));
+  } else {
+    console.log(data);
+  }
+}
+
+function copyDirRecursive(src: string, dest: string): void {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src);
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry);
+    const destPath = path.join(dest, entry);
+    const stat = fs.statSync(srcPath);
+    if (stat.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+export function registerCoreRepairCommand(
+  program: Command,
+  getOpts: () => CliOptions
+): void {
+  program
+    .command('core:repair')
+    .description('Repair WordPress core files by replacing with fresh download')
+    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--dry-run', 'Preview changes without applying them', true)
+    .option('--force', 'Actually perform the replacement', false)
+    .action(async (cmdOptions) => {
+      const opts = getOpts();
+      const targetPath = path.resolve(cmdOptions.path || opts.path);
+      const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
+
+      if (!fs.existsSync(targetPath)) {
+        const error = { success: false, error: 'Path does not exist', path: targetPath };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
+
+      const wpConfigPath = path.join(targetPath, 'wp-config.php');
+      const wpContentPath = path.join(targetPath, 'wp-content');
+      const htaccessPath = path.join(targetPath, '.htaccess');
+      const robotsTxtPath = path.join(targetPath, 'robots.txt');
+
+      const preserveList: string[] = [];
+      if (fs.existsSync(wpConfigPath)) preserveList.push('wp-config.php');
+      if (fs.existsSync(wpContentPath)) preserveList.push('wp-content');
+      if (fs.existsSync(htaccessPath)) preserveList.push('.htaccess');
+      if (fs.existsSync(robotsTxtPath)) preserveList.push('robots.txt');
+
+      logger.info(`Downloading WordPress core from wordpress.org`);
+
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-core-'));
+      const zipPath = path.join(tempDir, 'wordpress.tar.gz');
+
+      try {
+        const response = await fetch('https://wordpress.org/latest.tar.gz');
+        if (!response.ok) {
+          throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+        }
+
+        const buffer = await response.arrayBuffer();
+        fs.writeFileSync(zipPath, Buffer.from(buffer));
+
+        const zip = new AdmZip(zipPath);
+        const extractDir = path.join(tempDir, 'extracted');
+        zip.extractAllTo(extractDir, true);
+
+        const wordpressDir = path.join(extractDir, 'wordpress');
+        if (!fs.existsSync(wordpressDir)) {
+          throw new Error('Invalid WordPress archive: wordpress directory not found');
+        }
+
+        const newFiles = fs.readdirSync(wordpressDir);
+        const existingFiles = fs.existsSync(targetPath) ? fs.readdirSync(targetPath) : [];
+
+        const filesToReplace: string[] = [];
+        const filesToPreserve: string[] = [...preserveList];
+
+        for (const file of newFiles) {
+          if (preserveList.includes(file)) {
+            continue;
+          }
+          filesToReplace.push(file);
+        }
+
+        const result: CoreRepairResult = {
+          success: true,
+          filesReplaced: filesToReplace,
+          filesPreserved: filesToPreserve,
+          backupPath: null,
+          dryRun,
+        };
+
+        if (dryRun) {
+          console.log(`\n[DRY RUN] Would replace ${filesToReplace.length} core file(s):`);
+          for (const file of filesToReplace) {
+            console.log(`  - ${file}`);
+          }
+          console.log(`\n[DRY RUN] Would preserve ${filesToPreserve.length} file(s)/dir(s):`);
+          for (const file of filesToPreserve) {
+            console.log(`  - ${file}`);
+          }
+        } else {
+          const backupResult = createBackup(targetPath);
+          result.backupPath = backupResult.backupPath;
+          console.log(`Backup created at: ${backupResult.backupPath}`);
+
+          for (const file of filesToReplace) {
+            const srcPath = path.join(wordpressDir, file);
+            const destPath = path.join(targetPath, file);
+
+            if (fs.existsSync(srcPath)) {
+              const stat = fs.statSync(srcPath);
+              if (stat.isDirectory()) {
+                if (fs.existsSync(destPath)) {
+                  fs.rmSync(destPath, { recursive: true });
+                }
+                copyDirRecursive(srcPath, destPath);
+              } else {
+                fs.copyFileSync(srcPath, destPath);
+              }
+            }
+          }
+          console.log(`Replaced ${filesToReplace.length} core file(s)`);
+        }
+
+        formatOutput(result, opts.json || cmdOptions.json);
+      } catch (err) {
+        const error = {
+          success: false,
+          error: String(err),
+          dryRun,
+        };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+}
