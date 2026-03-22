@@ -61,7 +61,7 @@ const DB_SUSPICIOUS_PATTERNS = [
   { pattern: /chr\s*\(\s*\d+\s*\)\s*\./gi, type: 'char_obfuscation' },
 ];
 
-function parseWpConfig(wpConfigPath: string): DbCredentials | null {
+export function parseWpConfig(wpConfigPath: string): DbCredentials | null {
   if (!fs.existsSync(wpConfigPath)) {
     return null;
   }
@@ -107,7 +107,7 @@ async function runMysqlQuery(credentials: DbCredentials, query: string): Promise
   });
 }
 
-function parseMysqlOutput(output: string): { id: number; content: string }[] {
+export function parseMysqlOutput(output: string): { id: number; content: string }[] {
   const lines = output.trim().split('\n');
   if (lines.length < 2) return [];
   
