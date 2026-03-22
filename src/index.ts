@@ -16,6 +16,7 @@ export interface CliOptions {
   path: string;
   verbose: boolean;
   checkVulnerabilities: boolean;
+  checkIntegrity: boolean;
 }
 
 const program = new Command();
@@ -38,7 +39,8 @@ program
   .option('--json', 'Output results as JSON', false)
   .option('--path <path>', 'Target path to operate on', process.cwd())
   .option('--verbose', 'Show detailed threat information', false)
-  .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false);
+  .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
+  .option('--check-integrity', 'Check WordPress core file integrity', false);
 
 registerScanCommand(program, getOpts);
 registerCoreRepairCommand(program, getOpts);

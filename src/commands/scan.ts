@@ -5,6 +5,7 @@ import fg from 'fast-glob';
 import winston from 'winston';
 import { detectThreats, ScanResult } from '../malware-scanner';
 import { scanVulnerabilities, Vulnerability } from '../vulnerability-scanner';
+import { checkWordPressIntegrity, IntegrityResult } from '../file-integrity';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -19,6 +20,7 @@ interface CliOptions {
   path: string;
   verbose: boolean;
   checkVulnerabilities: boolean;
+  checkIntegrity: boolean;
 }
 
 function formatOutput(data: unknown, useJson: boolean): void {
@@ -77,6 +79,7 @@ export function registerScanCommand(
     .option('--path <path>', 'Directory to scan', getOpts().path)
     .option('--verbose', 'Show detailed threat information', false)
     .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
+    .option('--check-integrity', 'Check WordPress core file integrity', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
       const targetPath = cmdOptions.path || opts.path;
@@ -106,7 +109,9 @@ export function registerScanCommand(
         });
 
         const checkVulns = opts.checkVulnerabilities || cmdOptions.checkVulnerabilities;
+        const checkIntegrity = opts.checkIntegrity || cmdOptions.checkIntegrity;
         let vulnerabilities: Vulnerability[] = [];
+        let integrity: IntegrityResult | undefined;
 
         if (checkVulns) {
           console.log('Checking for vulnerabilities...');
@@ -119,6 +124,25 @@ export function registerScanCommand(
             }
             if (vulnResult.plugins.length > 0) {
               console.log(`  Plugins: ${vulnResult.plugins.length} found`);
+            }
+          }
+        }
+
+        if (checkIntegrity) {
+          console.log('Checking core file integrity...');
+          integrity = await checkWordPressIntegrity(normalizedPath);
+
+          if (!opts.json && !cmdOptions.json) {
+            if (integrity.wordpressVersion) {
+              console.log(`  WordPress version: ${integrity.wordpressVersion}`);
+            }
+            console.log(`  Files checked: ${integrity.checked}`);
+            console.log(`  Modified files: ${integrity.modified}`);
+            if (integrity.modifiedFiles.length > 0) {
+              console.log('  Modified core files:');
+              for (const file of integrity.modifiedFiles) {
+                console.log(`    - ${file}`);
+              }
             }
           }
         }
@@ -145,6 +169,7 @@ export function registerScanCommand(
         const output = {
           ...result,
           ...(checkVulns && { vulnerabilities }),
+          ...(checkIntegrity && { integrity }),
         };
 
         formatOutput(output, opts.json || cmdOptions.json);
