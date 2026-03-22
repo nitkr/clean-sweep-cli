@@ -17,6 +17,8 @@ export interface CliOptions {
   verbose: boolean;
   checkVulnerabilities: boolean;
   checkIntegrity: boolean;
+  report: boolean;
+  logLevel: string;
 }
 
 const program = new Command();
@@ -40,7 +42,9 @@ program
   .option('--path <path>', 'Target path to operate on', process.cwd())
   .option('--verbose', 'Show detailed threat information', false)
   .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
-  .option('--check-integrity', 'Check WordPress core file integrity', false);
+  .option('--check-integrity', 'Check WordPress core file integrity', false)
+  .option('--report', 'Save JSON report to file', false)
+  .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info');
 
 registerScanCommand(program, getOpts);
 registerCoreRepairCommand(program, getOpts);

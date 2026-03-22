@@ -2,16 +2,10 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
 import fg from 'fast-glob';
-import winston from 'winston';
 import { detectThreats, ScanResult } from '../malware-scanner';
 import { scanVulnerabilities, Vulnerability } from '../vulnerability-scanner';
 import { checkWordPressIntegrity, IntegrityResult } from '../file-integrity';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [new winston.transports.Console()],
-});
+import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefaultReportPath } from '../logger';
 
 interface CliOptions {
   dryRun: boolean;
@@ -21,6 +15,8 @@ interface CliOptions {
   verbose: boolean;
   checkVulnerabilities: boolean;
   checkIntegrity: boolean;
+  report: boolean;
+  logLevel: string;
 }
 
 function formatOutput(data: unknown, useJson: boolean): void {
@@ -31,9 +27,37 @@ function formatOutput(data: unknown, useJson: boolean): void {
   }
 }
 
+function buildSuggestions(
+  threats: ScanResult['threats'],
+  vulnerabilities: Vulnerability[],
+  integrity?: IntegrityResult
+): string[] {
+  const suggestions: string[] = [];
+
+  if (threats.length > 0) {
+    const hasMalware = threats.some(t =>
+      t.type.startsWith('php_') || t.type.startsWith('js_')
+    );
+    if (hasMalware) {
+      suggestions.push('Consider removing suspicious files or restoring from backup');
+    }
+  }
+
+  if (vulnerabilities.length > 0) {
+    suggestions.push('Update affected components to latest versions');
+  }
+
+  if (integrity && integrity.modified > 0) {
+    suggestions.push("Run 'clean-sweep core:repair' to restore core files");
+  }
+
+  return suggestions;
+}
+
 async function scanDirectory(
   targetPath: string,
-  options: { verbose: boolean; dryRun: boolean }
+  options: { verbose: boolean; dryRun: boolean },
+  logger: ReturnType<typeof createLogger>
 ): Promise<ScanResult> {
   const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
   const [files, directories] = await Promise.all([
@@ -44,6 +68,8 @@ async function scanDirectory(
   const threats: ReturnType<typeof detectThreats> = [];
   const scanExtensions = ['.php', '.js'];
 
+  logger.debug(`Scanning ${files.length} files in ${targetPath}`);
+
   for (const file of files) {
     const ext = path.extname(file).toLowerCase();
     if (!scanExtensions.includes(ext)) continue;
@@ -51,9 +77,12 @@ async function scanDirectory(
     try {
       const content = fs.readFileSync(file, 'utf-8');
       const fileThreats = detectThreats(file, content, options.verbose);
+      if (fileThreats.length > 0) {
+        logger.debug(`Found ${fileThreats.length} threats in ${file}`);
+      }
       threats.push(...fileThreats);
-    } catch {
-      // Skip files that can't be read
+    } catch (err) {
+      logger.warn(`Failed to read file: ${file}`, { error: String(err) });
     }
   }
 
@@ -76,21 +105,27 @@ export function registerScanCommand(
   program
     .command('scan')
     .description('Scan directory for files and directories')
-    .option('--path <path>', 'Directory to scan', getOpts().path)
+    .option('--path <path>', 'Directory to scan')
     .option('--verbose', 'Show detailed threat information', false)
     .option('--check-vulnerabilities', 'Check for known WordPress vulnerabilities', false)
     .option('--check-integrity', 'Check WordPress core file integrity', false)
+    .option('--report', 'Save JSON report to file', false)
+    .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       const targetPath = cmdOptions.path || opts.path;
       const verbose = opts.verbose || cmdOptions.verbose;
+      const report = cmdOptions.report ?? opts.report;
+      const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
 
-      logger.info(`Scanning directory: ${targetPath}`);
+      const logger = createLogger(logLevel);
+      logger.info(`Starting scan of directory: ${targetPath}`, { logLevel });
 
       const normalizedPath = path.resolve(targetPath);
 
       if (!fs.existsSync(normalizedPath)) {
         const error = { error: 'Path does not exist', path: normalizedPath };
+        logger.error('Scan failed: path does not exist', { path: normalizedPath });
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
@@ -98,6 +133,7 @@ export function registerScanCommand(
       const stats = fs.statSync(normalizedPath);
       if (!stats.isDirectory()) {
         const error = { error: 'Path is not a directory', path: normalizedPath };
+        logger.error('Scan failed: path is not a directory', { path: normalizedPath });
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
@@ -106,7 +142,7 @@ export function registerScanCommand(
         const result = await scanDirectory(normalizedPath, {
           verbose,
           dryRun: opts.dryRun,
-        });
+        }, logger);
 
         const checkVulns = opts.checkVulnerabilities || cmdOptions.checkVulnerabilities;
         const checkIntegrity = opts.checkIntegrity || cmdOptions.checkIntegrity;
@@ -114,6 +150,7 @@ export function registerScanCommand(
         let integrity: IntegrityResult | undefined;
 
         if (checkVulns) {
+          logger.info('Checking for vulnerabilities...');
           console.log('Checking for vulnerabilities...');
           const vulnResult = await scanVulnerabilities(normalizedPath);
           vulnerabilities = vulnResult.vulnerabilities;
@@ -129,6 +166,7 @@ export function registerScanCommand(
         }
 
         if (checkIntegrity) {
+          logger.info('Checking core file integrity...');
           console.log('Checking core file integrity...');
           integrity = await checkWordPressIntegrity(normalizedPath);
 
@@ -146,6 +184,8 @@ export function registerScanCommand(
             }
           }
         }
+
+        const suggestions = buildSuggestions(result.threats, vulnerabilities, integrity);
 
         if (!opts.json && !cmdOptions.json && result.threats.length > 0) {
           console.log(`\nFound ${result.threats.length} potential threat(s):`);
@@ -166,15 +206,38 @@ export function registerScanCommand(
           }
         }
 
+        if (!opts.json && !cmdOptions.json && suggestions.length > 0) {
+          console.log('\nSuggestions:');
+          for (const suggestion of suggestions) {
+            console.log(`  - ${suggestion}`);
+          }
+        }
+
         const output = {
           ...result,
           ...(checkVulns && { vulnerabilities }),
           ...(checkIntegrity && { integrity }),
+          suggestions,
         };
+
+        if (report) {
+          const reportData = generateReport(normalizedPath, output, suggestions);
+          const reportPath = getDefaultReportPath(normalizedPath);
+          saveReport(reportData, reportPath);
+          console.log(`\nReport saved to: ${reportPath}`);
+          logger.info('Report saved', { reportPath });
+        }
+
+        if (result.safe) {
+          logger.info('Scan completed successfully - no threats found');
+        } else {
+          logger.warn(`Scan completed - found ${result.threats.length} threat(s)`);
+        }
 
         formatOutput(output, opts.json || cmdOptions.json);
       } catch (err) {
         const error = { error: 'Scan failed', message: String(err) };
+        logger.error('Scan failed with error', { error: String(err) });
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }

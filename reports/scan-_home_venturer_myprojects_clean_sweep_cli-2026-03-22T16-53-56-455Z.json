@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-03-22T16:53:56.455Z",
+  "scanPath": "/home/venturer/myprojects/clean-sweep-cli",
+  "results": {
+    "path": "/home/venturer/myprojects/clean-sweep-cli",
+    "files": [
+      "/home/venturer/myprojects/clean-sweep-cli/README.md",
+      "/home/venturer/myprojects/clean-sweep-cli/goals.md",
+      "/home/venturer/myprojects/clean-sweep-cli/jest.config.js",
+      "/home/venturer/myprojects/clean-sweep-cli/package-lock.json",
+      "/home/venturer/myprojects/clean-sweep-cli/package.json",
+      "/home/venturer/myprojects/clean-sweep-cli/research-log.md",
+      "/home/venturer/myprojects/clean-sweep-cli/tsconfig.json",
+      "/home/venturer/myprojects/clean-sweep-cli/tsconfig.tsbuildinfo",
+      "/home/venturer/myprojects/clean-sweep-cli/bin/clean-sweep",
+      "/home/venturer/myprojects/clean-sweep-cli/logs/clean-sweep.log",
+      "/home/venturer/myprojects/clean-sweep-cli/src/backup.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/file-integrity.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/index.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/logger.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/malware-scanner.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/vulnerability-scanner.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/tests/malware-scan.test.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/cleanup.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/core-repair.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/db-scan.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/file-extract.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/plugin-reinstall.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/scan.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands/status.ts",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/index.php",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-includes/version.php",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/uploads/suspicious.js",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/plugins/test-plugin/test-plugin.php"
+    ],
+    "directories": [
+      "/home/venturer/myprojects/clean-sweep-cli/bin",
+      "/home/venturer/myprojects/clean-sweep-cli/logs",
+      "/home/venturer/myprojects/clean-sweep-cli/src",
+      "/home/venturer/myprojects/clean-sweep-cli/test",
+      "/home/venturer/myprojects/clean-sweep-cli/tests",
+      "/home/venturer/myprojects/clean-sweep-cli/src/commands",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-admin",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-includes",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/plugins",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/themes",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/uploads",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/plugins/test-plugin",
+      "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/themes/test-theme"
+    ],
+    "totalFiles": 29,
+    "totalDirectories": 16,
+    "threats": [
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_eval",
+        "line": 11,
+        "signature": "eval("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_eval",
+        "line": 15,
+        "signature": "eval("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_base64_decode",
+        "line": 11,
+        "signature": "base64_decode("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_base64_decode",
+        "line": 14,
+        "signature": "base64_decode("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_shell_exec",
+        "line": 6,
+        "signature": "shell_exec("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_exec",
+        "line": 6,
+        "signature": "exec("
+      },
+      {
+        "file": "/home/venturer/myprojects/clean-sweep-cli/test/fixtures/wp-install/wp-content/malware-backdoor.php",
+        "type": "php_get_parameter",
+        "line": 4,
+        "signature": "$_GET["
+      }
+    ],
+    "safe": false,
+    "dryRun": true,
+    "suggestions": [
+      "Consider removing suspicious files or restoring from backup"
+    ]
+  },
+  "suggestions": [
+    "Consider removing suspicious files or restoring from backup"
+  ]
+}
