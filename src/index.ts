@@ -16,6 +16,7 @@ import { registerRestoreCommand } from './commands/restore';
 import { registerScheduleCommand } from './commands/schedule';
 import { registerDepsCheckCommand } from './commands/deps-check';
 import { registerPermissionsCheckCommand } from './commands/permissions-check';
+import { registerConfigValidateCommand } from './commands/config-validate';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -73,6 +74,7 @@ registerRestoreCommand(program, getOpts);
 registerScheduleCommand(program, getOpts);
 registerDepsCheckCommand(program, getOpts);
 registerPermissionsCheckCommand(program, getOpts);
+registerConfigValidateCommand(program, getOpts);
 
 program.parse(process.argv);
 
