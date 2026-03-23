@@ -1,0 +1,232 @@
+{
+  "version": "1.0.0",
+  "description": "PHP malware signatures for Clean Sweep CLI",
+  "lastUpdated": "2026-03-23",
+  "signatures": [
+    {
+      "id": "php-webshell-001",
+      "name": "Base64 Encoded Webshell",
+      "description": "Uses base64_decode with eval to execute encoded commands",
+      "severity": "critical",
+      "pattern": "eval\\s*\\(\\s*base64_decode",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-webshell-002",
+      "name": "POST-based Webshell",
+      "description": "Executes commands sent via POST parameters",
+      "severity": "critical",
+      "pattern": "\\$_POST.*eval|eval\\s*\\(\\s*\\$_POST",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-webshell-003",
+      "name": "GET-based Command Execution",
+      "description": "Executes commands from GET parameters",
+      "severity": "critical",
+      "pattern": "shell_exec\\s*\\(\\s*\\$_GET",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-webshell-004",
+      "name": "Hidden Input Webshell",
+      "description": "Uses hidden form inputs for command injection",
+      "severity": "high",
+      "pattern": "<input[^>]*type\\s*=\\s*['\"]hidden['\"][^>]*name\\s*=\\s*['\"]cmd",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-webshell-005",
+      "name": "cURL-based Remote Execution",
+      "description": "Fetches and executes remote code via cURL",
+      "severity": "critical",
+      "pattern": "curl_exec\\s*\\(\\s*\\$",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-backdoor-001",
+      "name": "Function Callback Backdoor",
+      "description": "Uses call_user_func for dynamic code execution",
+      "severity": "critical",
+      "pattern": "call_user_func\\s*\\(",
+      "type": "backdoor",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-backdoor-002",
+      "name": "Create Function Backdoor",
+      "description": "Creates anonymous functions dynamically",
+      "severity": "critical",
+      "pattern": "create_function\\s*\\(",
+      "type": "backdoor",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-backdoor-003",
+      "name": "preg_replace /e Callback",
+      "description": "Uses preg_replace with /e modifier for code execution",
+      "severity": "critical",
+      "pattern": "preg_replace\\s*\\([^)]*\\/e",
+      "type": "backdoor",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-backdoor-004",
+      "name": "assert() Dynamic Execution",
+      "description": "Uses assert() to evaluate dynamic strings",
+      "severity": "critical",
+      "pattern": "assert\\s*\\(\\s*\\$",
+      "type": "backdoor",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-backdoor-005",
+      "name": "Array Map Execution",
+      "description": "Uses array_map with callable for code execution",
+      "severity": "high",
+      "pattern": "array_map\\s*\\(\\s*['\"\\$]",
+      "type": "backdoor",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-encoded-001",
+      "name": "gzinflate Decompression",
+      "description": "Decompresses gzinflate encoded data",
+      "severity": "high",
+      "pattern": "gzinflate\\s*\\(",
+      "type": "encoded-shell",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-encoded-002",
+      "name": "gzuncompress Decompression",
+      "description": "Decompresses gzdeflate encoded data",
+      "severity": "high",
+      "pattern": "gzuncompress\\s*\\(",
+      "type": "encoded-shell",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-encoded-003",
+      "name": "str_rot13 Obfuscation",
+      "description": "Uses ROT13 encoding for obfuscation",
+      "severity": "medium",
+      "pattern": "str_rot13\\s*\\(",
+      "type": "encoded-shell",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-encoded-004",
+      "name": "Hex Encoding",
+      "description": "Uses hex2bin for encoding obfuscation",
+      "severity": "high",
+      "pattern": "hex2bin\\s*\\(",
+      "type": "encoded-shell",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-encoded-005",
+      "name": "Chunk Split Encoding",
+      "description": "Uses chunk_split for encoding manipulation",
+      "severity": "medium",
+      "pattern": "chunk_split\\s*\\(",
+      "type": "encoded-shell",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-suspicious-001",
+      "name": "Process Execution Functions",
+      "description": "Multiple process execution functions present",
+      "severity": "high",
+      "pattern": "(shell_exec|exec|passthru|system)\\s*\\(",
+      "type": "suspicious-function",
+      "category": "system-command"
+    },
+    {
+      "id": "php-suspicious-002",
+      "name": "Proc Open Execution",
+      "description": "Uses proc_open for process manipulation",
+      "severity": "high",
+      "pattern": "proc_open\\s*\\(",
+      "type": "suspicious-function",
+      "category": "system-command"
+    },
+    {
+      "id": "php-suspicious-003",
+      "name": "PCNTL Process Control",
+      "description": "Uses pcntl_exec for process execution",
+      "severity": "high",
+      "pattern": "pcntl_exec\\s*\\(",
+      "type": "suspicious-function",
+      "category": "system-command"
+    },
+    {
+      "id": "php-suspicious-004",
+      "name": "URL File Access",
+      "description": "Uses file_get_contents with URLs",
+      "severity": "medium",
+      "pattern": "file_get_contents\\s*\\(\\s*['\"]http",
+      "type": "suspicious-function",
+      "category": "network-access"
+    },
+    {
+      "id": "php-suspicious-005",
+      "name": "FPM/FastCGI Execution",
+      "description": "Uses fastcgi_finish_request",
+      "severity": "medium",
+      "pattern": "fastcgi_finish_request\\s*\\(",
+      "type": "suspicious-function",
+      "category": "system-command"
+    },
+    {
+      "id": "php-suspicious-006",
+      "name": "Multiple Encoding Layers",
+      "description": "Multiple encoding functions chained together",
+      "severity": "critical",
+      "pattern": "(base64_decode|gzinflate|str_rot13)\\s*\\([^)]*\\$[^)]*\\)",
+      "type": "multi-layer-obfuscation",
+      "category": "obfuscation"
+    },
+    {
+      "id": "php-suspicious-007",
+      "name": "Variable Function Call",
+      "description": "Uses variable function names for execution",
+      "severity": "high",
+      "pattern": "\\$[a-zA-Z_]\\w*\\s*\\(",
+      "type": "dynamic-function",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-suspicious-008",
+      "name": "Reflection Execution",
+      "description": "Uses reflection for dynamic code execution",
+      "severity": "high",
+      "pattern": "ReflectionMethod.*invoke",
+      "type": "suspicious-function",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-suspicious-009",
+      "name": "Eval with Variable",
+      "description": "Uses eval with variable content",
+      "severity": "critical",
+      "pattern": "eval\\s*\\(\\s*\\$",
+      "type": "suspicious-function",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-suspicious-010",
+      "name": "Include/Require Remote",
+      "description": "Includes or requires remote files",
+      "severity": "critical",
+      "pattern": "(include|require)\\s*\\(\\s*['\"]http",
+      "type": "remote-inclusion",
+      "category": "remote-code-execution"
+    }
+  ]
+}

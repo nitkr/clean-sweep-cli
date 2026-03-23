@@ -1,0 +1,251 @@
+{
+  "version": "1.0.0",
+  "description": "Suspicious file patterns for Clean Sweep CLI",
+  "lastUpdated": "2026-03-23",
+  "signatures": {
+    "doubleExtensions": [
+      {
+        "id": "file-double-ext-001",
+        "name": "PHP as Second Extension",
+        "description": "File with PHP hidden behind another extension",
+        "severity": "critical",
+        "pattern": "\\.(jpg|jpeg|png|gif|html|htm|txt|js|css|zip|rar|pdf)\\.(php|phtml|php3|php4|php5|php7|php8|phar)$",
+        "type": "double-extension",
+        "examples": ["image.php.jpg", "file.txt.php", "data.php5"]
+      },
+      {
+        "id": "file-double-ext-002",
+        "name": "JavaScript as Second Extension",
+        "description": "File with JavaScript hidden behind another extension",
+        "severity": "high",
+        "pattern": "\\.(jpg|jpeg|png|gif|html|htm|txt|zip|rar|pdf)\\.js$",
+        "type": "double-extension",
+        "examples": ["image.js.jpg", "file.txt.js"]
+      },
+      {
+        "id": "file-double-ext-003",
+        "name": "Shell Script Extension",
+        "description": "File with shell script hidden behind another extension",
+        "severity": "critical",
+        "pattern": "\\.(txt|jpg|png|gif|zip|rar)\\.sh$",
+        "type": "double-extension",
+        "examples": ["readme.txt.sh", "photo.jpg.sh"]
+      }
+    ],
+    "maliciousFilenames": [
+      {
+        "id": "file-mal-name-001",
+        "name": "Shell Executable",
+        "description": "Direct shell script or executable",
+        "severity": "high",
+        "pattern": "(shell|sh\\.php|cmd|exec|bash|run)\\.(php|phtml|php3|php5|js|sh|pl|cgi)$",
+        "type": "malicious-filename",
+        "examples": ["shell.php", "cmd.php", "exec.php", "run.sh"]
+      },
+      {
+        "id": "file-mal-name-002",
+        "name": "Backdoor Keywords",
+        "description": "Files with backdoor-related names",
+        "severity": "critical",
+        "pattern": "(backdoor|rootkit|trojan|webshell|c99|r57|webadmin|updater|downloader|hacker|inject|shell)\\.(php|phtml|php3|php4|php5|js)$",
+        "type": "malicious-filename",
+        "examples": ["backdoor.php", "webshell.php", "c99.php", "r57.php"]
+      },
+      {
+        "id": "file-mal-name-003",
+        "name": "Config Extraction",
+        "description": "Files related to configuration theft",
+        "severity": "critical",
+        "pattern": "(config|setup|install|wp-config|db|mysql|sql|connect)\\.(php|phtml|php3|js|txt)$",
+        "type": "malicious-filename",
+        "examples": ["config.php", "setup.php", "wp-config.php", "db.php"]
+      },
+      {
+        "id": "file-mal-name-004",
+        "name": "Obfuscated Filename",
+        "description": "Files with obfuscated or random-looking names",
+        "severity": "high",
+        "pattern": "^[a-z0-9]{8,32}\\.(php|phtml|php3|php4|php5|js)$",
+        "type": "malicious-filename",
+        "examples": ["a1b2c3d4.php", "x7f8e9d2.php"]
+      },
+      {
+        "id": "file-mal-name-005",
+        "name": "System File Access",
+        "description": "Files attempting to access system files",
+        "severity": "high",
+        "pattern": "(passwd|shadow|etc|root|home|var|usr)\\.(php|js|txt|log)$",
+        "type": "malicious-filename",
+        "examples": ["passwd.php", "etc.txt", "shadow.php"]
+      },
+      {
+        "id": "file-mal-name-006",
+        "name": "Email Harvester",
+        "description": "Files related to email collection",
+        "severity": "medium",
+        "pattern": "(email|mail|form|contact|submit).*\\.(php|js)$",
+        "type": "malicious-filename",
+        "examples": ["email.php", "mailer.php", "contact.php"]
+      },
+      {
+        "id": "file-mal-name-007",
+        "name": "Crypto Miner",
+        "description": "Files related to cryptocurrency mining",
+        "severity": "critical",
+        "pattern": "(coin|miner|cryptonight|monero|bitcoin|hash|xmrig)\\.(php|js|sh)$",
+        "type": "malicious-filename",
+        "examples": ["miner.php", "coin.js", "xmrig.php"]
+      },
+      {
+        "id": "file-mal-name-008",
+        "name": "Spam Related",
+        "description": "Files related to spam distribution",
+        "severity": "high",
+        "pattern": "(spam|sendmail|bulk|mailer|smtp|newsletter)\\.(php|js)$",
+        "type": "malicious-filename",
+        "examples": ["spam.php", "sendmail.php", "bulk.php"]
+      }
+    ],
+    "suspiciousExtensions": [
+      {
+        "id": "file-susp-ext-001",
+        "name": "Alternative PHP Extensions",
+        "description": "Less common PHP file extensions",
+        "severity": "medium",
+        "pattern": "\\.(phtml|php3|php4|php5|php6|php7|php8|phar|pht)$",
+        "type": "suspicious-extension",
+        "examples": ["file.php3", "script.php4", "data.phar"]
+      },
+      {
+        "id": "file-susp-ext-002",
+        "name": "PHP with Numeric Extension",
+        "description": "PHP files with numeric suffixes",
+        "severity": "high",
+        "pattern": "\\.php\\d+$",
+        "type": "suspicious-extension",
+        "examples": ["file.php7", "script.php8"]
+      },
+      {
+        "id": "file-susp-ext-003",
+        "name": "Server Side Includes",
+        "description": "Server side include files",
+        "severity": "low",
+        "pattern": "\\.(shtml|sht|stm)$",
+        "type": "suspicious-extension",
+        "examples": ["file.shtml", "include.sht"]
+      },
+      {
+        "id": "file-susp-ext-004",
+        "name": "Perl Scripts",
+        "description": "Perl executable scripts",
+        "severity": "medium",
+        "pattern": "\\.(pl|cgi|pm)$",
+        "type": "suspicious-extension",
+        "examples": ["script.pl", "tool.cgi"]
+      },
+      {
+        "id": "file-susp-ext-005",
+        "name": "Python Scripts",
+        "description": "Python executable scripts",
+        "severity": "medium",
+        "pattern": "\\.(py|pyc|pyo|pyw)$",
+        "type": "suspicious-extension",
+        "examples": ["script.py", "tool.pyc"]
+      },
+      {
+        "id": "file-susp-ext-006",
+        "name": "Ruby Scripts",
+        "description": "Ruby executable scripts",
+        "severity": "medium",
+        "pattern": "\\.(rb|erb|rhtml|rake)$",
+        "type": "suspicious-extension",
+        "examples": ["script.rb", "template.erb"]
+      },
+      {
+        "id": "file-susp-ext-007",
+        "name": "Shell Scripts",
+        "description": "Unix shell scripts",
+        "severity": "medium",
+        "pattern": "\\.(sh|bash|fish|zsh)$",
+        "type": "suspicious-extension",
+        "examples": ["script.sh", "install.bash"]
+      },
+      {
+        "id": "file-susp-ext-008",
+        "name": "Windows Scripts",
+        "description": "Windows script files",
+        "severity": "medium",
+        "pattern": "\\.(bat|cmd|ps1|vbs|bat)$",
+        "type": "suspicious-extension",
+        "examples": ["script.bat", "run.cmd", "tool.ps1"]
+      },
+      {
+        "id": "file-susp-ext-009",
+        "name": "Executable Extensions",
+        "description": "Binary executable files",
+        "severity": "high",
+        "pattern": "\\.(exe|dll|so|dylib|app)$",
+        "type": "suspicious-extension",
+        "examples": ["file.exe", "module.dll", "library.so"]
+      },
+      {
+        "id": "file-susp-ext-010",
+        "name": "Archive Extensions",
+        "description": "Compressed archive files",
+        "severity": "low",
+        "pattern": "\\.(zip|rar|7z|tar|gz|bz2|xz|ace|arj)$",
+        "type": "suspicious-extension",
+        "examples": ["backup.zip", "data.rar", "archive.tar"]
+      }
+    ],
+    "pathTraversal": [
+      {
+        "id": "file-path-001",
+        "name": "Parent Directory Traversal",
+        "description": "Attempts to access parent directories",
+        "severity": "high",
+        "pattern": "^.*\\.\\.[\\/\\\\].*",
+        "type": "path-traversal",
+        "examples": ["../../etc/passwd", "..\\..\\windows\\system32"]
+      },
+      {
+        "id": "file-path-002",
+        "name": "Absolute Path Traversal",
+        "description": "Uses absolute paths for traversal",
+        "severity": "medium",
+        "pattern": "^(\\/|\\\\|a-zA-Z:\\\\)",
+        "type": "path-traversal",
+        "examples": ["/etc/passwd", "C:\\Windows\\System32"]
+      },
+      {
+        "id": "file-path-003",
+        "name": "Null Byte Injection",
+        "description": "Uses null bytes to bypass extension checks",
+        "severity": "critical",
+        "pattern": "\\x00|%00",
+        "type": "path-traversal",
+        "examples": ["file.php%00.jpg", "script.php\\x00.txt"]
+      }
+    ],
+    "hiddenFiles": [
+      {
+        "id": "file-hidden-001",
+        "name": "Hidden System Files",
+        "description": "Hidden files that start with dot",
+        "severity": "low",
+        "pattern": "^\\.",
+        "type": "hidden-file",
+        "examples": [".htaccess", ".env", ".bashrc"]
+      },
+      {
+        "id": "file-hidden-002",
+        "name": "Configuration Backup",
+        "description": "Backup configuration files",
+        "severity": "medium",
+        "pattern": "\\.(bak|backup|old|orig|save|swp|swo)$",
+        "type": "backup-file",
+        "examples": ["config.php.bak", "wp-config.old"]
+      }
+    ]
+  }
+}
