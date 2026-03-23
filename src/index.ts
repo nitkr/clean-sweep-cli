@@ -8,6 +8,7 @@ import { registerFileExtractCommand } from './commands/file-extract';
 import { registerDbScanCommand } from './commands/db-scan';
 import { registerCleanupCommand } from './commands/cleanup';
 import { registerStatusCommand } from './commands/status';
+import { registerUpdateSignaturesCommand } from './commands/update-signatures';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -55,6 +56,7 @@ registerFileExtractCommand(program, getOpts);
 registerDbScanCommand(program, getOpts);
 registerCleanupCommand(program, getOpts);
 registerStatusCommand(program, getOpts);
+registerUpdateSignaturesCommand(program, getOpts);
 
 program.parse(process.argv);
 

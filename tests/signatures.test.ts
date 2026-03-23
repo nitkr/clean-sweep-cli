@@ -91,6 +91,12 @@ describe('Signature Files', () => {
     expect(errors).toHaveLength(0);
   });
 
+  it('should load and validate signatures/db-signatures.json', () => {
+    const filePath = path.join(signaturesDir, 'db-signatures.json');
+    const errors = validateSignatureFile(filePath);
+    expect(errors).toHaveLength(0);
+  });
+
   it('should load and validate signatures/file-patterns.json', () => {
     const filePath = path.join(signaturesDir, 'file-patterns.json');
     const errors = validateSignatureFile(filePath);
@@ -98,7 +104,7 @@ describe('Signature Files', () => {
   });
 
   it('should have all required fields in every signature', () => {
-    const files = ['php-signatures.json', 'js-signatures.json', 'file-patterns.json'];
+    const files = ['php-signatures.json', 'js-signatures.json', 'file-patterns.json', 'db-signatures.json'];
     const requiredFields = ['id', 'name', 'pattern', 'severity'];
 
     files.forEach((file) => {
@@ -119,7 +125,7 @@ describe('Signature Files', () => {
   });
 
   it('should have valid severity levels in all signatures', () => {
-    const files = ['php-signatures.json', 'js-signatures.json', 'file-patterns.json'];
+    const files = ['php-signatures.json', 'js-signatures.json', 'file-patterns.json', 'db-signatures.json'];
 
     files.forEach((file) => {
       const filePath = path.join(signaturesDir, file);
