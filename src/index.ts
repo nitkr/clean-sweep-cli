@@ -19,6 +19,7 @@ import { registerPermissionsCheckCommand } from './commands/permissions-check';
 import { registerConfigValidateCommand } from './commands/config-validate';
 import { registerHardenCheckCommand } from './commands/harden-check';
 import { registerFixCommand } from './commands/fix';
+import { registerCompareCommand } from './commands/compare';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -79,6 +80,7 @@ registerPermissionsCheckCommand(program, getOpts);
 registerConfigValidateCommand(program, getOpts);
 registerHardenCheckCommand(program, getOpts);
 registerFixCommand(program, getOpts);
+registerCompareCommand(program, getOpts);
 
 program.parse(process.argv);
 
