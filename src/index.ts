@@ -15,6 +15,7 @@ import { registerQuarantineCommand } from './commands/quarantine';
 import { registerRestoreCommand } from './commands/restore';
 import { registerScheduleCommand } from './commands/schedule';
 import { registerDepsCheckCommand } from './commands/deps-check';
+import { registerPermissionsCheckCommand } from './commands/permissions-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -71,6 +72,7 @@ registerQuarantineCommand(program, getOpts);
 registerRestoreCommand(program, getOpts);
 registerScheduleCommand(program, getOpts);
 registerDepsCheckCommand(program, getOpts);
+registerPermissionsCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
