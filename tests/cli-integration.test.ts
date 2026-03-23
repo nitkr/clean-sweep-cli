@@ -4,6 +4,8 @@ import * as path from 'path';
 const CLI_PATH = path.join(__dirname, '..', 'bin', 'clean-sweep');
 const CLEAN_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'clean-wp');
 const MALWARE_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-install');
+const WP_COMPLETE_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-complete');
+const WP_EMPTY_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-empty');
 
 function runCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
@@ -252,17 +254,18 @@ describe('CLI Integration Tests', () => {
       expect(typeof output.themesCount).toBe('number');
     });
 
-    it('status returns graceful handling for non-existent path', async () => {
+    it('status returns error for non-existent path', async () => {
       const { stdout, code } = await runCli([
         'status',
         '--path', '/non/existent/path',
         '--json',
       ]);
 
+      expect(code).toBe(1);
+
       const output = extractLastJson(stdout) as Record<string, unknown>;
-      expect(output.version).toBeNull();
-      expect(output.pluginsCount).toBe(0);
-      expect(output.themesCount).toBe(0);
+      expect(output).toHaveProperty('error');
+      expect(output.error).toBe('Path does not exist');
     });
 
     it('status returns graceful handling when path is not a directory', async () => {
@@ -274,9 +277,11 @@ describe('CLI Integration Tests', () => {
         '--json',
       ]);
 
+      expect(code).toBe(1);
+
       const output = extractLastJson(stdout) as Record<string, unknown>;
-      expect(output.version).toBeNull();
-      expect(output.pluginsCount).toBe(0);
+      expect(output).toHaveProperty('error');
+      expect(output.error).toBe('Path is not a directory');
     });
   });
 
@@ -754,6 +759,62 @@ describe('CLI Integration Tests', () => {
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('success');
       expect(output.success).toBe(true);
+    });
+  });
+
+  describe('wp-complete fixture tests', () => {
+    it('scan on wp-complete fixture returns safe:true', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', WP_COMPLETE_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('safe');
+      expect(output.safe).toBe(true);
+      expect(output).toHaveProperty('threats');
+      expect(output.threats).toEqual([]);
+    });
+
+    it('status on wp-complete fixture detects WP version, plugins, themes', async () => {
+      const { stdout, code } = await runCli([
+        'status',
+        '--path', WP_COMPLETE_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('version');
+      expect(output.version).toBe('6.4.2');
+      expect(output).toHaveProperty('pluginsCount');
+      expect(output.pluginsCount).toBeGreaterThan(0);
+      expect(output).toHaveProperty('themesCount');
+      expect(output.themesCount).toBeGreaterThan(0);
+    });
+  });
+
+  describe('wp-empty fixture tests', () => {
+    it('scan on wp-empty fixture returns safe:true', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', WP_EMPTY_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('safe');
+      expect(output.safe).toBe(true);
+      expect(output).toHaveProperty('threats');
+      expect(output.threats).toEqual([]);
     });
   });
 });
