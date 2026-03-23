@@ -11,7 +11,7 @@ interface CliOptions {
   verbose: boolean;
 }
 
-interface DbCredentials {
+export interface DbCredentials {
   host: string;
   name: string;
   user: string;
