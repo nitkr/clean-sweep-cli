@@ -610,6 +610,68 @@ describe('CLI Integration Tests', () => {
     }, 30000);
   });
 
+  describe('db:scan dry-run and json format', () => {
+    it('db:scan --dry-run outputs expected dry-run format in text mode', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--db-host', 'localhost',
+        '--db-name', 'testdb',
+        '--db-user', 'testuser',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('[DRY RUN]');
+      expect(stdout).toContain('Would scan table:');
+      expect(stdout).toContain('wp_posts');
+    }, 30000);
+
+    it('db:scan --json outputs valid JSON format', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--db-host', 'localhost',
+        '--db-name', 'testdb',
+        '--db-user', 'testuser',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const jsonMatch = stdout.match(/\{[\s\S]*"success":\s*true[\s\S]*\}/g);
+      expect(jsonMatch).not.toBeNull();
+      
+      const output = JSON.parse(jsonMatch![0]) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+      expect(output).toHaveProperty('scannedTables');
+      expect(Array.isArray(output.scannedTables)).toBe(true);
+      expect((output.scannedTables as string[]).length).toBeGreaterThan(0);
+      expect(output).toHaveProperty('threats');
+      expect(Array.isArray(output.threats)).toBe(true);
+      expect(output).toHaveProperty('dryRun');
+      expect(output.dryRun).toBe(true);
+    }, 30000);
+
+    it('db:scan returns error for non-WP directory without wp-config.php', async () => {
+      const { stdout, code } = await runCli([
+        'db:scan',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('wp-config.php');
+    });
+  });
+
   describe('file:extract error handling', () => {
     it('returns error when zip path is not provided', async () => {
       const { stdout, code } = await runCli([
