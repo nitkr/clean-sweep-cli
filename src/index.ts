@@ -9,6 +9,7 @@ import { registerDbScanCommand } from './commands/db-scan';
 import { registerCleanupCommand } from './commands/cleanup';
 import { registerStatusCommand } from './commands/status';
 import { registerUpdateSignaturesCommand } from './commands/update-signatures';
+import { registerListSignaturesCommand } from './commands/list-signatures';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -57,6 +58,7 @@ registerDbScanCommand(program, getOpts);
 registerCleanupCommand(program, getOpts);
 registerStatusCommand(program, getOpts);
 registerUpdateSignaturesCommand(program, getOpts);
+registerListSignaturesCommand(program, getOpts);
 
 program.parse(process.argv);
 
