@@ -7,6 +7,7 @@ import { scanVulnerabilities, Vulnerability } from '../vulnerability-scanner';
 import { checkWordPressIntegrity, IntegrityResult } from '../file-integrity';
 import { findUnknownFiles, UnknownFilesResult } from '../wp-file-detector';
 import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefaultReportPath } from '../logger';
+import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
 
 interface CliOptions {
   dryRun: boolean;
@@ -18,6 +19,7 @@ interface CliOptions {
   checkIntegrity: boolean;
   findUnknown: boolean;
   report: boolean;
+  htmlReport: boolean;
   logLevel: string;
 }
 
@@ -113,12 +115,14 @@ export function registerScanCommand(
     .option('--check-integrity', 'Check WordPress core file integrity', false)
     .option('--find-unknown', 'Find unknown files not part of WordPress core', false)
     .option('--report', 'Save JSON report to file', false)
+    .option('--html-report', 'Save HTML report to file', false)
     .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       const targetPath = cmdOptions.path || opts.path;
       const verbose = opts.verbose || cmdOptions.verbose;
       const report = cmdOptions.report ?? opts.report;
+      const htmlReport = cmdOptions.htmlReport ?? opts.htmlReport;
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
 
       const logger = createLogger(logLevel);
@@ -253,6 +257,22 @@ export function registerScanCommand(
           saveReport(reportData, reportPath);
           console.log(`\nReport saved to: ${reportPath}`);
           logger.info('Report saved', { reportPath });
+        }
+
+        if (htmlReport) {
+          const htmlReportData: HtmlReportData = {
+            timestamp: new Date().toISOString(),
+            scanPath: normalizedPath,
+            scanResult: result,
+            ...(checkVulns && { vulnerabilities }),
+            ...(checkIntegrity && { integrity }),
+            suggestions,
+          };
+          const html = generateHtmlReport(htmlReportData);
+          const htmlReportPath = getDefaultHtmlReportPath(normalizedPath);
+          saveHtmlReport(html, htmlReportPath);
+          console.log(`\nHTML report saved to: ${htmlReportPath}`);
+          logger.info('HTML report saved', { htmlReportPath });
         }
 
         if (result.safe) {

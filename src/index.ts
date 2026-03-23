@@ -24,6 +24,7 @@ export interface CliOptions {
   checkIntegrity: boolean;
   findUnknown: boolean;
   report: boolean;
+  htmlReport: boolean;
   logLevel: string;
 }
 
@@ -51,6 +52,7 @@ program
   .option('--check-integrity', 'Check WordPress core file integrity', false)
   .option('--find-unknown', 'Find unknown files not part of WordPress core', false)
   .option('--report', 'Save JSON report to file', false)
+  .option('--html-report', 'Save HTML report to file', false)
   .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info');
 
 registerScanCommand(program, getOpts);
