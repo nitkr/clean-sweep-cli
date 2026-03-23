@@ -24,6 +24,7 @@
     "commander": "^11.1.0",
     "fast-glob": "^3.3.2",
     "node-fetch": "^3.3.2",
+    "tar": "^7.5.12",
     "winston": "^3.11.0"
   },
   "devDependencies": {

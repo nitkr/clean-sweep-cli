@@ -848,6 +848,55 @@ describe('CLI Integration Tests', () => {
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('error');
     });
+
+    it('returns error for non-WP directory', async () => {
+      const { stdout, code } = await runCli([
+        'core:repair',
+        '--path', NON_WP_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('error');
+    }, 30000);
+  });
+
+  describe('core:repair --dry-run', () => {
+    it('shows files to replace and preserve in output', async () => {
+      const { stdout, code } = await runCli([
+        'core:repair',
+        '--path', CLEAN_FIXTURE,
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('[DRY RUN] Would replace');
+      expect(stdout).toContain('[DRY RUN] Would preserve');
+    }, 30000);
+  });
+
+  describe('core:repair --json', () => {
+    it('returns valid JSON with expected properties', async () => {
+      const { stdout, code } = await runCli([
+        'core:repair',
+        '--path', CLEAN_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+      expect(output).toHaveProperty('filesReplaced');
+      expect(output).toHaveProperty('filesPreserved');
+      expect(output).toHaveProperty('dryRun');
+      expect(output.dryRun).toBe(true);
+    }, 30000);
   });
 
   describe('cleanup error handling', () => {

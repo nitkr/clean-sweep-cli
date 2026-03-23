@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
-import AdmZip from 'adm-zip';
+import * as tar from 'tar';
 import winston from 'winston';
 import { createBackup, CoreRepairResult } from '../backup';
 
@@ -51,7 +51,7 @@ export function registerCoreRepairCommand(
   program
     .command('core:repair')
     .description('Repair WordPress core files by replacing with fresh download')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--dry-run', 'Preview changes without applying them', true)
     .option('--force', 'Actually perform the replacement', false)
     .action(async (cmdOptions) => {
@@ -69,6 +69,13 @@ export function registerCoreRepairCommand(
       const wpContentPath = path.join(targetPath, 'wp-content');
       const htaccessPath = path.join(targetPath, '.htaccess');
       const robotsTxtPath = path.join(targetPath, 'robots.txt');
+
+      const isWordPress = fs.existsSync(wpConfigPath) || fs.existsSync(wpContentPath);
+      if (!isWordPress) {
+        const error = { success: false, error: 'Not a valid WordPress installation', path: targetPath };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
 
       const preserveList: string[] = [];
       if (fs.existsSync(wpConfigPath)) preserveList.push('wp-config.php');
@@ -90,9 +97,9 @@ export function registerCoreRepairCommand(
         const buffer = await response.arrayBuffer();
         fs.writeFileSync(zipPath, Buffer.from(buffer));
 
-        const zip = new AdmZip(zipPath);
         const extractDir = path.join(tempDir, 'extracted');
-        zip.extractAllTo(extractDir, true);
+        fs.mkdirSync(extractDir, { recursive: true });
+        await tar.extract({ file: zipPath, cwd: extractDir });
 
         const wordpressDir = path.join(extractDir, 'wordpress');
         if (!fs.existsSync(wordpressDir)) {
