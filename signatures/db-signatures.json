@@ -1,0 +1,268 @@
+{
+  "version": "1.0.0",
+  "description": "Database malware signatures for Clean Sweep CLI - WordPress and general database threats",
+  "lastUpdated": "2026-03-23",
+  "signatures": [
+    {
+      "id": "db-sqli-001",
+      "name": "SQL Injection UNION Attack",
+      "description": "Detects UNION-based SQL injection attempts in database fields",
+      "severity": "critical",
+      "pattern": "UNION\\s+ALL\\s+SELECT",
+      "type": "sql-injection",
+      "category": "injection"
+    },
+    {
+      "id": "db-sqli-002",
+      "name": "SQL Injection OR-based Attack",
+      "description": "Detects OR-based SQL injection patterns",
+      "severity": "critical",
+      "pattern": "'\\s+OR\\s+'\\d*'\\s*=\\s*'\\d*'",
+      "type": "sql-injection",
+      "category": "injection"
+    },
+    {
+      "id": "db-sqli-003",
+      "name": "SQL Injection Comment Attack",
+      "description": "Detects SQL injection using comment truncation",
+      "severity": "critical",
+      "pattern": "'\\s*--",
+      "type": "sql-injection",
+      "category": "injection"
+    },
+    {
+      "id": "db-sqli-004",
+      "name": "SQL Injection Stacked Query",
+      "description": "Detects stacked query SQL injection attempts",
+      "severity": "critical",
+      "pattern": ";(DROP|DELETE|INSERT|UPDATE|TRUNCATE)\\s+",
+      "type": "sql-injection",
+      "category": "injection"
+    },
+    {
+      "id": "db-base64-001",
+      "name": "Base64 Encoded Payload",
+      "description": "Detects base64 encoded content in database fields",
+      "severity": "high",
+      "pattern": "(aHR0cDovL|cmVtb3RfdXJs|c3lzdGVt|c2hlbGxfZXhlY3V0ZS|kno3ckB|ZXZhbChmdW5jdGlvbigp)",
+      "type": "encoded-payload",
+      "category": "obfuscation"
+    },
+    {
+      "id": "db-base64-002",
+      "name": "Long Base64 String",
+      "description": "Detects unusually long base64 encoded strings",
+      "severity": "medium",
+      "pattern": "[A-Za-z0-9+/=]{200,}",
+      "type": "encoded-payload",
+      "category": "obfuscation"
+    },
+    {
+      "id": "db-js-001",
+      "name": "Suspicious Script Tag in Option",
+      "description": "Detects script tag injection in WordPress options",
+      "severity": "critical",
+      "pattern": "<script[^>]*>.*</script>",
+      "type": "javascript-injection",
+      "category": "xss"
+    },
+    {
+      "id": "db-js-002",
+      "name": "Inline Event Handler",
+      "description": "Detects inline JavaScript event handlers",
+      "severity": "high",
+      "pattern": "on(click|load|error|mouseover|submit|change)\\s*=",
+      "type": "javascript-injection",
+      "category": "xss"
+    },
+    {
+      "id": "db-js-003",
+      "name": "JavaScript eval() Usage",
+      "description": "Detects JavaScript eval() usage in database content",
+      "severity": "high",
+      "pattern": "eval\\s*\\([^)]+\\)",
+      "type": "javascript-injection",
+      "category": "xss"
+    },
+    {
+      "id": "db-js-004",
+      "name": "Document Write Injection",
+      "description": "Detects document.write usage for injections",
+      "severity": "high",
+      "pattern": "document\\.write\\s*\\(",
+      "type": "javascript-injection",
+      "category": "xss"
+    },
+    {
+      "id": "db-js-005",
+      "name": "iframe Injection",
+      "description": "Detects iframe element injection",
+      "severity": "high",
+      "pattern": "<iframe[^>]*src\\s*=",
+      "type": "javascript-injection",
+      "category": "iframe-injection"
+    },
+    {
+      "id": "db-redirect-001",
+      "name": "Meta Refresh Redirect",
+      "description": "Detects meta refresh redirects in database content",
+      "severity": "high",
+      "pattern": "<meta[^>]*http-equiv\\s*=\\s*['\"]refresh['\"][^>]*content\\s*=\\s*['\"]\\d+;\\s*url\\s*=",
+      "type": "redirect",
+      "category": "malicious-redirect"
+    },
+    {
+      "id": "db-redirect-002",
+      "name": "Window Location Redirect",
+      "description": "Detects JavaScript window location redirects",
+      "severity": "high",
+      "pattern": "window\\.(location|href)\\s*=\\s*['\"]https?://",
+      "type": "redirect",
+      "category": "malicious-redirect"
+    },
+    {
+      "id": "db-redirect-003",
+      "name": "JavaScript Redirect",
+      "description": "Detects generic JavaScript redirect patterns",
+      "severity": "high",
+      "pattern": "location\\.href\\s*=|top\\.location\\s*=",
+      "type": "redirect",
+      "category": "malicious-redirect"
+    },
+    {
+      "id": "db-spam-001",
+      "name": "Pharmaceutical Spam Link",
+      "description": "Detects pharmaceutical spam links in database",
+      "severity": "high",
+      "pattern": "(pharmacy|viagra|cialis|casino|poker|lottery)[a-z0-9.-]+\\.(com|net|org|info|xyz|tk|ml|ga|cf|gq)",
+      "type": "spam-link",
+      "category": "spam"
+    },
+    {
+      "id": "db-spam-002",
+      "name": "SEO Spam Link Pattern",
+      "description": "Detects common SEO spam link patterns",
+      "severity": "medium",
+      "pattern": "(free|luxury|best|top|buy|cheap)[a-z0-9-]+\\.(xyz|tk|ml|ga|cf|gq|pw|cc)",
+      "type": "spam-link",
+      "category": "spam"
+    },
+    {
+      "id": "db-spam-003",
+      "name": "Adult Content Link",
+      "description": "Detects adult content spam links",
+      "severity": "high",
+      "pattern": "(adult|porn|xxx|sex|dating|escort)[a-z0-9.-]+\\.(com|net|org|xyz|tk|ml)",
+      "type": "spam-link",
+      "category": "spam"
+    },
+    {
+      "id": "db-spam-004",
+      "name": "Link Farm Pattern",
+      "description": "Detects suspicious link farm patterns in post content",
+      "severity": "medium",
+      "pattern": "<a[^>]*href\\s*=\\s*['\"][^'\"]*['\"][^>]*>.*?<\\/a>.*?<a[^>]*href",
+      "type": "spam-link",
+      "category": "spam"
+    },
+    {
+      "id": "db-url-001",
+      "name": "Suspicious TLD Domain",
+      "description": "Detects suspicious top-level domains often used in malware",
+      "severity": "medium",
+      "pattern": "https?://[^\\s]+(\\.(tk|ml|ga|cf|gq|pw|cc|top|work|click|download|xyz|date|stream|racing|science|guru|menu|trade|accountant|review|cricket|loan|men|download|date|cricket|bid|win|stream|press|download|link|coat|planet|webcam|fish|host|xyz|racing|trade|download|date|stream|science|guru|work|men|accountant|review|loan|cricket|win|bid|press|download|link|coat|planet|webcam|fish|host))(/|$|\\?)",
+      "type": "suspicious-url",
+      "category": "malicious-url"
+    },
+    {
+      "id": "db-url-002",
+      "name": "IP-based URL",
+      "description": "Detects direct IP address URLs (often malicious)",
+      "severity": "medium",
+      "pattern": "https?://\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(/|\\s)",
+      "type": "suspicious-url",
+      "category": "malicious-url"
+    },
+    {
+      "id": "db-url-003",
+      "name": "Encoded URL Payload",
+      "description": "Detects URL-encoded suspicious payloads",
+      "severity": "high",
+      "pattern": "%3Cscript|%3Ciframe|%3Cobject|%3Cembed|%3Capability",
+      "type": "suspicious-url",
+      "category": "obfuscation"
+    },
+    {
+      "id": "db-eval-001",
+      "name": "PHP eval() in Serialized Data",
+      "description": "Detects eval() patterns within serialized PHP data",
+      "severity": "critical",
+      "pattern": "eval\\s*\\(|assert\\s*\\(|preg_replace.*\\/e|call_user_func",
+      "type": "code-execution",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "db-eval-002",
+      "name": "Serialized PHP Object Injection",
+      "description": "Detects serialized PHP object patterns that may indicate object injection",
+      "severity": "critical",
+      "pattern": "O:\\d+:|a:\\d+:\\{",
+      "type": "code-execution",
+      "category": "object-injection"
+    },
+    {
+      "id": "db-eval-003",
+      "name": "Base64 decode with eval",
+      "description": "Detects base64 decode combined with eval execution",
+      "severity": "critical",
+      "pattern": "base64_decode\\s*\\([^)]+\\)\\s*;?\\s*eval",
+      "type": "code-execution",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "db-backdoor-001",
+      "name": "WordPress Options Backdoor",
+      "description": "Detects suspicious patterns in WordPress wp_options table",
+      "severity": "high",
+      "pattern": "(widget_|active_plugins|rewrite_rules)_[a-zA-Z0-9_]+",
+      "type": "backdoor",
+      "category": "persistence"
+    },
+    {
+      "id": "db-backdoor-002",
+      "name": "Suspicious User Role",
+      "description": "Detects suspicious administrator accounts",
+      "severity": "critical",
+      "pattern": "a:\\d+:\\{s:\\d+:\\\"role\\\";s:\\d+:\\\"administrator\\\"",
+      "type": "backdoor",
+      "category": "privilege-escalation"
+    },
+    {
+      "id": "db-backdoor-003",
+      "name": "Cron Schedule Backdoor",
+      "description": "Detects WordPress cron job scheduled malicious code",
+      "severity": "high",
+      "pattern": "cron.*(eval|base64|shell_exec|system)\\s*\\(",
+      "type": "backdoor",
+      "category": "persistence"
+    },
+    {
+      "id": "db-crypto-001",
+      "name": "Cryptominer Configuration",
+      "description": "Detects cryptocurrency miner configurations",
+      "severity": "critical",
+      "pattern": "(coinhive|cryptoloot|coinblind|jsecoin|coin-hive|pool|miner|stratum\\+tcp)",
+      "type": "cryptominer",
+      "category": "crypto-mining"
+    },
+    {
+      "id": "db-crypto-002",
+      "name": "CoinHive Script Reference",
+      "description": "Detects CoinHive cryptocurrency miner script references",
+      "severity": "critical",
+      "pattern": "coinhive\\.com|coin-hive\\.com|cryptoloot\\.pro",
+      "type": "cryptominer",
+      "category": "crypto-mining"
+    }
+  ]
+}
