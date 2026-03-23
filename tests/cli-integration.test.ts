@@ -1,5 +1,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 const CLI_PATH = path.join(__dirname, '..', 'bin', 'clean-sweep');
 const CLEAN_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'clean-wp');
@@ -816,5 +818,88 @@ describe('CLI Integration Tests', () => {
       expect(output).toHaveProperty('threats');
       expect(output.threats).toEqual([]);
     });
+  });
+
+  describe('large directory performance tests', () => {
+    const TEST_FILE_COUNT = 100;
+    let tempDir: string;
+
+    beforeAll(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'clean-sweep-perf-'));
+      const phpContent = `<?php
+/**
+ * Test file for performance testing
+ */
+class TestClass {
+    public function test() {
+        return true;
+    }
+}
+`;
+
+      for (let i = 0; i < TEST_FILE_COUNT; i++) {
+        const filePath = path.join(tempDir, `test-file-${i}.php`);
+        fs.writeFileSync(filePath, phpContent);
+      }
+    });
+
+    afterAll(() => {
+      if (tempDir && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it('scans large directory within reasonable time', async () => {
+      const startTime = Date.now();
+
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', tempDir,
+        '--json',
+        '--dry-run',
+      ]);
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      expect(code).toBe(0);
+      expect(duration).toBeLessThan(30000);
+    }, 60000);
+
+    it('correctly identifies clean files in large directory', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', tempDir,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('safe');
+      expect(output.safe).toBe(true);
+      expect(output).toHaveProperty('threats');
+      expect(output.threats).toEqual([]);
+      expect(output).toHaveProperty('totalFiles');
+      expect((output.totalFiles as number)).toBeGreaterThanOrEqual(TEST_FILE_COUNT);
+    }, 60000);
+
+    it('scan with verbose flag includes details for large directory', async () => {
+      const { stdout, code } = await runCli([
+        'scan',
+        '--path', tempDir,
+        '--json',
+        '--verbose',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('files');
+      expect(Array.isArray(output.files)).toBe(true);
+      expect((output.files as unknown[]).length).toBeGreaterThanOrEqual(TEST_FILE_COUNT);
+    }, 60000);
   });
 });
