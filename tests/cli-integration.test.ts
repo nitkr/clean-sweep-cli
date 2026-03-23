@@ -818,6 +818,60 @@ describe('CLI Integration Tests', () => {
       expect(output).toHaveProperty('success');
       expect(output.success).toBe(false);
     }, 30000);
+
+    it('returns error for non-WP directory', async () => {
+      const { stdout, code } = await runCli([
+        'plugin:reinstall',
+        '--path', NON_WP_FIXTURE,
+        '--plugin', 'akismet',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+    }, 30000);
+  });
+
+  describe('plugin:reinstall --dry-run', () => {
+    it('plugin:reinstall --dry-run outputs expected dry-run format in text mode', async () => {
+      const { stdout, code } = await runCli([
+        'plugin:reinstall',
+        '--path', CLEAN_FIXTURE,
+        '--plugin', 'akismet',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('[DRY RUN]');
+      expect(stdout).toContain('Would reinstall plugin:');
+      expect(stdout).toContain('akismet');
+    }, 30000);
+  });
+
+  describe('plugin:reinstall --json', () => {
+    it('plugin:reinstall --json outputs valid JSON format', async () => {
+      const { stdout, code } = await runCli([
+        'plugin:reinstall',
+        '--path', CLEAN_FIXTURE,
+        '--plugin', 'akismet',
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+      expect(output).toHaveProperty('pluginSlug');
+      expect(output.pluginSlug).toBe('akismet');
+      expect(output).toHaveProperty('dryRun');
+      expect(output.dryRun).toBe(true);
+    }, 30000);
   });
 
   describe('core:repair error handling', () => {
