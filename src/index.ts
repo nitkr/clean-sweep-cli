@@ -17,6 +17,7 @@ import { registerScheduleCommand } from './commands/schedule';
 import { registerDepsCheckCommand } from './commands/deps-check';
 import { registerPermissionsCheckCommand } from './commands/permissions-check';
 import { registerConfigValidateCommand } from './commands/config-validate';
+import { registerHardenCheckCommand } from './commands/harden-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -75,6 +76,7 @@ registerScheduleCommand(program, getOpts);
 registerDepsCheckCommand(program, getOpts);
 registerPermissionsCheckCommand(program, getOpts);
 registerConfigValidateCommand(program, getOpts);
+registerHardenCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
