@@ -22,6 +22,7 @@ function createMockScanResult(overrides: Partial<ScanResult> = {}): ScanResult {
     threats: [],
     safe: true,
     dryRun: false,
+    whitelisted: 0,
     ...overrides,
   };
 }

@@ -8,6 +8,7 @@ import { checkWordPressIntegrity, IntegrityResult } from '../file-integrity';
 import { findUnknownFiles, UnknownFilesResult } from '../wp-file-detector';
 import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefaultReportPath } from '../logger';
 import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
+import { loadWhitelist, applyWhitelist, WhitelistConfig } from '../whitelist';
 
 interface CliOptions {
   dryRun: boolean;
@@ -61,7 +62,8 @@ function buildSuggestions(
 async function scanDirectory(
   targetPath: string,
   options: { verbose: boolean; dryRun: boolean },
-  logger: ReturnType<typeof createLogger>
+  logger: ReturnType<typeof createLogger>,
+  whitelist?: WhitelistConfig
 ): Promise<ScanResult> {
   const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
   const [files, directories] = await Promise.all([
@@ -90,15 +92,29 @@ async function scanDirectory(
     }
   }
 
+  const totalBeforeWhitelist = threats.length;
+  let filteredThreats = threats;
+  let whitelistedCount = 0;
+
+  if (whitelist) {
+    const { applyWhitelist: applyWhitelistFn } = require('../whitelist');
+    filteredThreats = applyWhitelistFn(threats, whitelist);
+    whitelistedCount = totalBeforeWhitelist - filteredThreats.length;
+    if (whitelistedCount > 0) {
+      logger.info(`Whitelist filtered out ${whitelistedCount} threat(s)`);
+    }
+  }
+
   return {
     path: targetPath,
     files,
     directories,
     totalFiles: files.length,
     totalDirectories: directories.length,
-    threats,
-    safe: threats.length === 0,
+    threats: filteredThreats,
+    safe: filteredThreats.length === 0,
     dryRun: options.dryRun,
+    whitelisted: whitelistedCount,
   };
 }
 
@@ -117,6 +133,7 @@ export function registerScanCommand(
     .option('--report', 'Save JSON report to file', false)
     .option('--html-report', 'Save HTML report to file', false)
     .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
+    .option('--whitelist-file <path>', 'Path to custom whitelist JSON file')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       const targetPath = cmdOptions.path || opts.path;
@@ -146,10 +163,25 @@ export function registerScanCommand(
       }
 
       try {
+        const whitelistFile = cmdOptions.whitelistFile;
+        let whitelist: WhitelistConfig | undefined;
+        try {
+          whitelist = loadWhitelist(whitelistFile);
+          if (whitelist.paths.length > 0 || whitelist.signatures.length > 0 || whitelist.extensions.length > 0) {
+            logger.info('Loaded whitelist configuration', {
+              paths: whitelist.paths.length,
+              signatures: whitelist.signatures.length,
+              extensions: whitelist.extensions.length,
+            });
+          }
+        } catch (wlErr) {
+          logger.warn('Failed to load whitelist configuration', { error: String(wlErr) });
+        }
+
         const result = await scanDirectory(normalizedPath, {
           verbose,
           dryRun: opts.dryRun,
-        }, logger);
+        }, logger, whitelist);
 
         const checkVulns = opts.checkVulnerabilities || cmdOptions.checkVulnerabilities;
         const checkIntegrity = opts.checkIntegrity || cmdOptions.checkIntegrity;
@@ -226,6 +258,12 @@ export function registerScanCommand(
               console.log(`    Signature: ${threat.signature}`);
             }
           }
+          if (result.whitelisted > 0) {
+            console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
+          }
+          console.log(`\nScan result: ${result.safe ? 'SAFE' : 'UNSAFE'}`);
+        } else if (!opts.json && !cmdOptions.json && result.whitelisted > 0) {
+          console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
           console.log(`\nScan result: ${result.safe ? 'SAFE' : 'UNSAFE'}`);
         }
 

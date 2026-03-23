@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "description": "Whitelist configuration for Clean Sweep CLI malware scanner",
+  "lastUpdated": "2026-03-23",
+  "paths": [],
+  "signatures": [],
+  "extensions": [".log", ".md", ".txt"]
+}
