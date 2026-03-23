@@ -20,6 +20,7 @@ import { registerConfigValidateCommand } from './commands/config-validate';
 import { registerHardenCheckCommand } from './commands/harden-check';
 import { registerFixCommand } from './commands/fix';
 import { registerCompareCommand } from './commands/compare';
+import { registerSignatureCreateCommand } from './commands/signature-create';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -81,6 +82,7 @@ registerConfigValidateCommand(program, getOpts);
 registerHardenCheckCommand(program, getOpts);
 registerFixCommand(program, getOpts);
 registerCompareCommand(program, getOpts);
+registerSignatureCreateCommand(program, getOpts);
 
 program.parse(process.argv);
 
