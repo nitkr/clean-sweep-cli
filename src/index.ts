@@ -23,6 +23,7 @@ import { registerCompareCommand } from './commands/compare';
 import { registerSignatureCreateCommand } from './commands/signature-create';
 import { registerScanBatchCommand } from './commands/scan-batch';
 import { registerHistoryCommand } from './commands/history';
+import { registerUsersCheckCommand } from './commands/users-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -87,6 +88,7 @@ registerCompareCommand(program, getOpts);
 registerSignatureCreateCommand(program, getOpts);
 registerScanBatchCommand(program, getOpts);
 registerHistoryCommand(program, getOpts);
+registerUsersCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
