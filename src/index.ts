@@ -10,6 +10,7 @@ import { registerCleanupCommand } from './commands/cleanup';
 import { registerStatusCommand } from './commands/status';
 import { registerUpdateSignaturesCommand } from './commands/update-signatures';
 import { registerListSignaturesCommand } from './commands/list-signatures';
+import { registerSummaryCommand } from './commands/summary';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -59,6 +60,7 @@ registerCleanupCommand(program, getOpts);
 registerStatusCommand(program, getOpts);
 registerUpdateSignaturesCommand(program, getOpts);
 registerListSignaturesCommand(program, getOpts);
+registerSummaryCommand(program, getOpts);
 
 program.parse(process.argv);
 
