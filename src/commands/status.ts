@@ -140,7 +140,7 @@ export function registerStatusCommand(
   program
     .command('status')
     .description('Show WordPress installation health status')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--json', 'Output results as JSON', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();

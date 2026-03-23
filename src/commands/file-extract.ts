@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
 import AdmZip from 'adm-zip';
+import { isWordPressInstallation } from '../wp-file-detector';
 
 interface CliOptions {
   dryRun: boolean;
@@ -56,14 +57,14 @@ export function registerFileExtractCommand(
   program
     .command('file:extract')
     .description('Extract a ZIP file to a WordPress folder')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--zip <path>', 'Path to ZIP file to extract (required)')
     .option('--target <dir>', 'Target directory (default: wp-content/uploads/)', 'wp-content/uploads/')
     .option('--dry-run', 'Preview changes without applying them', true)
     .option('--force', 'Actually extract the ZIP file', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const wpPath = path.resolve(cmdOptions.path || opts.path);
+      const wpPath = path.resolve(cmdOptions.path || opts.path || process.cwd());
       const zipPath = cmdOptions.zip;
       const targetDir = cmdOptions.target || 'wp-content/uploads/';
       const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
@@ -76,6 +77,12 @@ export function registerFileExtractCommand(
 
       if (!fs.existsSync(wpPath)) {
         const error = { success: false, error: 'WordPress path does not exist', path: wpPath };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
+
+      if (!isWordPressInstallation(wpPath)) {
+        const error = { success: false, error: 'Path is not a valid WordPress installation', path: wpPath };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }

@@ -8,6 +8,8 @@ const CLEAN_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'clean-wp')
 const MALWARE_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-install');
 const WP_COMPLETE_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-complete');
 const WP_EMPTY_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'wp-empty');
+const TEST_ZIP_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'test-zip', 'files.zip');
+const NON_WP_FIXTURE = path.join(__dirname, '..', 'test', 'fixtures', 'non-wp-dir');
 
 function runCli(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve) => {
@@ -705,7 +707,7 @@ describe('CLI Integration Tests', () => {
     it('returns error when ZIP file does not exist', async () => {
       const { stdout, code } = await runCli([
         'file:extract',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--zip', '/non/existent/file.zip',
         '--json',
       ]);
@@ -715,6 +717,74 @@ describe('CLI Integration Tests', () => {
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('error');
       expect(output.error).toContain('does not exist');
+    });
+
+    it('file:extract --dry-run outputs expected dry-run format in text mode', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', WP_COMPLETE_FIXTURE,
+        '--zip', TEST_ZIP_FIXTURE,
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+      expect(stdout).toContain('[DRY RUN]');
+      expect(stdout).toContain('Would extract ZIP:');
+      expect(stdout).toContain('Would extract');
+      expect(stdout).toContain('file(s):');
+    });
+
+    it('file:extract --json outputs valid JSON format', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', WP_COMPLETE_FIXTURE,
+        '--zip', TEST_ZIP_FIXTURE,
+        '--json',
+        '--dry-run',
+      ]);
+
+      expect(code).toBe(0);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(true);
+      expect(output).toHaveProperty('extractedFiles');
+      expect(Array.isArray(output.extractedFiles)).toBe(true);
+      expect(output).toHaveProperty('dryRun');
+      expect(output.dryRun).toBe(true);
+    });
+
+    it('file:extract returns error for non-existent ZIP file', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', WP_COMPLETE_FIXTURE,
+        '--zip', '/path/to/nonexistent.zip',
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+      expect(output).toHaveProperty('error');
+      expect(output.error).toContain('does not exist');
+    });
+
+    it('file:extract returns error for non-WP directory', async () => {
+      const { stdout, code } = await runCli([
+        'file:extract',
+        '--path', NON_WP_FIXTURE,
+        '--zip', TEST_ZIP_FIXTURE,
+        '--json',
+      ]);
+
+      expect(code).toBe(1);
+
+      const output = extractLastJson(stdout) as Record<string, unknown>;
+      expect(output).toHaveProperty('success');
+      expect(output.success).toBe(false);
+      expect(output).toHaveProperty('error');
     });
   });
 
