@@ -24,6 +24,7 @@ import { registerSignatureCreateCommand } from './commands/signature-create';
 import { registerScanBatchCommand } from './commands/scan-batch';
 import { registerHistoryCommand } from './commands/history';
 import { registerUsersCheckCommand } from './commands/users-check';
+import { registerLicensesCheckCommand } from './commands/licenses-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -89,6 +90,7 @@ registerSignatureCreateCommand(program, getOpts);
 registerScanBatchCommand(program, getOpts);
 registerHistoryCommand(program, getOpts);
 registerUsersCheckCommand(program, getOpts);
+registerLicensesCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
