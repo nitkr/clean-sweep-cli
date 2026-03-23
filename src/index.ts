@@ -27,6 +27,7 @@ import { registerUsersCheckCommand } from './commands/users-check';
 import { registerLicensesCheckCommand } from './commands/licenses-check';
 import { registerCronManageCommand } from './commands/cron-manage';
 import { registerEnvCheckCommand } from './commands/env-check';
+import { registerSslCheckCommand } from './commands/ssl-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -95,6 +96,7 @@ registerUsersCheckCommand(program, getOpts);
 registerLicensesCheckCommand(program, getOpts);
 registerCronManageCommand(program, getOpts);
 registerEnvCheckCommand(program, getOpts);
+registerSslCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
