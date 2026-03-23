@@ -21,6 +21,7 @@ import { registerHardenCheckCommand } from './commands/harden-check';
 import { registerFixCommand } from './commands/fix';
 import { registerCompareCommand } from './commands/compare';
 import { registerSignatureCreateCommand } from './commands/signature-create';
+import { registerScanBatchCommand } from './commands/scan-batch';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -83,6 +84,7 @@ registerHardenCheckCommand(program, getOpts);
 registerFixCommand(program, getOpts);
 registerCompareCommand(program, getOpts);
 registerSignatureCreateCommand(program, getOpts);
+registerScanBatchCommand(program, getOpts);
 
 program.parse(process.argv);
 
