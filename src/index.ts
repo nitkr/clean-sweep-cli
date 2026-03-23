@@ -13,6 +13,7 @@ import { registerListSignaturesCommand } from './commands/list-signatures';
 import { registerSummaryCommand } from './commands/summary';
 import { registerQuarantineCommand } from './commands/quarantine';
 import { registerRestoreCommand } from './commands/restore';
+import { registerScheduleCommand } from './commands/schedule';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -67,6 +68,7 @@ registerListSignaturesCommand(program, getOpts);
 registerSummaryCommand(program, getOpts);
 registerQuarantineCommand(program, getOpts);
 registerRestoreCommand(program, getOpts);
+registerScheduleCommand(program, getOpts);
 
 program.parse(process.argv);
 
