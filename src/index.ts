@@ -26,6 +26,7 @@ import { registerHistoryCommand } from './commands/history';
 import { registerUsersCheckCommand } from './commands/users-check';
 import { registerLicensesCheckCommand } from './commands/licenses-check';
 import { registerCronManageCommand } from './commands/cron-manage';
+import { registerEnvCheckCommand } from './commands/env-check';
 
 export interface CliOptions {
   dryRun: boolean;
@@ -93,6 +94,7 @@ registerHistoryCommand(program, getOpts);
 registerUsersCheckCommand(program, getOpts);
 registerLicensesCheckCommand(program, getOpts);
 registerCronManageCommand(program, getOpts);
+registerEnvCheckCommand(program, getOpts);
 
 program.parse(process.argv);
 
