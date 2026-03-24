@@ -32,8 +32,9 @@ export function registerCleanupCommand(
       const opts = getOpts();
       const targetPath = path.resolve(opts.path || cmdOptions.path);
       const force = opts.force || cmdOptions.force;
+      const dryRun = opts.dryRun && !force;
 
-      if (!force) {
+      if (!force && !dryRun) {
         const error = { 
           success: false, 
           error: 'Cleanup requires --force flag. This command will remove toolkit files.',
@@ -80,7 +81,7 @@ export function registerCleanupCommand(
       const result = {
         success: true,
         removedFiles: [] as string[],
-        dryRun: false,
+        dryRun: dryRun,
       };
 
       if (filesToRemove.length === 0) {
@@ -96,6 +97,15 @@ export function registerCleanupCommand(
         for (const file of filesToRemove) {
           console.log(`  - ${file}`);
         }
+      }
+
+      if (dryRun) {
+        if (!opts.json && !cmdOptions.json) {
+          console.log(`(Dry run) Would remove ${filesToRemove.length} item(s).`);
+        }
+        result.removedFiles = filesToRemove;
+        formatOutput(result, opts.json || cmdOptions.json);
+        return;
       }
 
       for (const file of filesToRemove) {

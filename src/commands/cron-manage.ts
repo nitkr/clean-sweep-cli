@@ -139,20 +139,20 @@ export function listJobs(crontab: string): CronManageResult {
   return { success: true, action: 'list', jobs };
 }
 
-export function enableJob(crontab: string, jobId: number): CronManageResult {
+export function enableJob(crontab: string, jobId: number): CronManageResult & { updatedCrontab: string } {
   const { updated, job } = toggleCronJob(crontab, jobId, true);
   if (!job) {
-    return { success: false, action: 'enable', jobs: [], message: `Job with id ${jobId} not found` };
+    return { success: false, action: 'enable', jobs: [], message: `Job with id ${jobId} not found`, updatedCrontab: crontab };
   }
-  return { success: true, action: 'enable', jobs: [job], message: `Job ${jobId} enabled` };
+  return { success: true, action: 'enable', jobs: [job], message: `Job ${jobId} enabled`, updatedCrontab: updated };
 }
 
-export function disableJob(crontab: string, jobId: number): CronManageResult {
+export function disableJob(crontab: string, jobId: number): CronManageResult & { updatedCrontab: string } {
   const { updated, job } = toggleCronJob(crontab, jobId, false);
   if (!job) {
-    return { success: false, action: 'disable', jobs: [], message: `Job with id ${jobId} not found` };
+    return { success: false, action: 'disable', jobs: [], message: `Job with id ${jobId} not found`, updatedCrontab: crontab };
   }
-  return { success: true, action: 'disable', jobs: [job], message: `Job ${jobId} disabled` };
+  return { success: true, action: 'disable', jobs: [job], message: `Job ${jobId} disabled`, updatedCrontab: updated };
 }
 
 function printJobs(jobs: CronJob[]): void {
@@ -255,8 +255,7 @@ export function registerCronManageCommand(
         const result = enableJob(crontab, jobId);
 
         if (result.success) {
-          const { updated } = toggleCronJob(crontab, jobId, true);
-          writeCrontab(updated, (content) => {
+          writeCrontab(result.updatedCrontab, (content) => {
             const { execSync } = require('child_process');
             execSync('crontab -', { input: content });
           });
@@ -308,8 +307,7 @@ export function registerCronManageCommand(
         const result = disableJob(crontab, jobId);
 
         if (result.success) {
-          const { updated } = toggleCronJob(crontab, jobId, false);
-          writeCrontab(updated, (content) => {
+          writeCrontab(result.updatedCrontab, (content) => {
             const { execSync } = require('child_process');
             execSync('crontab -', { input: content });
           });
