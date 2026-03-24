@@ -394,6 +394,28 @@ export function checkInactiveUsers(users: WordPressUser[], daysThreshold: number
   return issues;
 }
 
+export function checkUserStatus(users: WordPressUser[]): UserIssue[] {
+  const issues: UserIssue[] = [];
+
+  for (const user of users) {
+    // Check userStatus field if present
+    if (user.userStatus) {
+      const status = user.userStatus.toLowerCase();
+      if (status === 'spam' || status === 'deleted' || status === 'pending') {
+        issues.push({
+          user,
+          type: 'deleted_status',
+          severity: 'MEDIUM',
+          description: `User "${user.login}" has suspicious status: ${user.userStatus}`,
+          recommendation: `Review account "${user.login}" - status "${user.userStatus}" may indicate a disabled or compromised account`,
+        });
+      }
+    }
+  }
+
+  return issues;
+}
+
 export interface DbCredentials {
   host: string;
   name: string;
@@ -503,6 +525,36 @@ async function queryDatabase(wpPath: string): Promise<WordPressUser[]> {
             // No last login data
           }
 
+          // Query user status (spam, deleted flags)
+          let userStatus: string | undefined;
+          try {
+            // Check for spam status
+            const spamQuery = `SELECT meta_value FROM ${prefix}usermeta WHERE user_id = ${userId} AND meta_key = 'spam'`;
+            const spamCmd = `mysql -h "${host}" -u "${user}"${pass ? ` -p"${pass}"` : ''} "${name}" -e "${spamQuery}" -B`;
+            const spamOutput = await execPromise(spamCmd);
+            const spamLines = spamOutput.trim().split('\n').slice(1);
+            if (spamLines.length > 0 && spamLines[0] === '1') {
+              userStatus = 'spam';
+            }
+          } catch {
+            // No spam status
+          }
+
+          try {
+            // Check for deleted status
+            if (!userStatus) {
+              const deletedQuery = `SELECT meta_value FROM ${prefix}usermeta WHERE user_id = ${userId} AND meta_key = 'deleted'`;
+              const deletedCmd = `mysql -h "${host}" -u "${user}"${pass ? ` -p"${pass}"` : ''} "${name}" -e "${deletedQuery}" -B`;
+              const deletedOutput = await execPromise(deletedCmd);
+              const deletedLines = deletedOutput.trim().split('\n').slice(1);
+              if (deletedLines.length > 0 && deletedLines[0] === '1') {
+                userStatus = 'deleted';
+              }
+            }
+          } catch {
+            // No deleted status
+          }
+
           users.push({
             id: userId,
             login: fields[1],
@@ -510,6 +562,7 @@ async function queryDatabase(wpPath: string): Promise<WordPressUser[]> {
             displayName: fields[3],
             registeredDate: fields[4],
             lastLoginDate,
+            userStatus,
             roles,
           });
         }
@@ -601,6 +654,7 @@ function buildCheckResult(targetPath: string, users: WordPressUser[], source: Us
     issues.push(...checkDisposableEmails(users));
     issues.push(...checkSpamEmails(users));
     issues.push(...checkInactiveUsers(users));
+    issues.push(...checkUserStatus(users));
   }
 
   const bySeverity: Record<string, number> = {};
