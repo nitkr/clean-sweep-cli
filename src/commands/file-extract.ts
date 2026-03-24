@@ -68,7 +68,7 @@ export function registerFileExtractCommand(
       let wpPath = path.resolve(cmdOptions.path || opts.path || process.cwd());
       const zipPath = cmdOptions.zip;
       const targetDir = cmdOptions.target || 'wp-content/uploads/';
-      const dryRun = !cmdOptions.force && !opts.force;
+      const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
 
       if (!zipPath) {
         const error = { success: false, error: 'ZIP file path is required. Use --zip <path>' };

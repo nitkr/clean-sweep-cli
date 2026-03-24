@@ -272,7 +272,7 @@ export function registerDbOptimizeCommand(
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
-      const dryRun = !cmdOptions.force && !opts.force;
+      const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
 
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };

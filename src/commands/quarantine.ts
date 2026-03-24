@@ -37,7 +37,7 @@ async function scanForThreats(
   verbose: boolean,
   logger: ReturnType<typeof createLogger>
 ): Promise<Threat[]> {
-  const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/quarantine/**'];
+  const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/clean-sweep-cli/quarantine/**', '**/clean-sweep-cli/quarantine-backup/**'];
   const files = await fg('**/*', {
     cwd: targetPath,
     absolute: true,
@@ -87,7 +87,7 @@ function createQuarantineBackup(
   targetPath: string
 ): { backupDir: string; backedUp: number } {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(targetPath, 'quarantine-backup', timestamp);
+  const backupDir = path.join(targetPath, 'clean-sweep-cli', 'quarantine-backup', timestamp);
 
   fs.mkdirSync(backupDir, { recursive: true });
 
@@ -151,7 +151,7 @@ export function registerQuarantineCommand(
       const useJson = opts.json || cmdOptions.json;
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
       const logger = createLogger(logLevel);
-      const dryRun = !cmdOptions.force && !opts.force;
+      const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
 
       if (!fs.existsSync(targetPath)) {
         const error: QuarantineResult = {
@@ -235,7 +235,7 @@ export function registerQuarantineCommand(
         }
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const quarantineDir = path.join(targetPath, 'quarantine', timestamp);
+        const quarantineDir = path.join(targetPath, 'clean-sweep-cli', 'quarantine', timestamp);
 
         const backup = createQuarantineBackup(infectedFiles, targetPath);
         logger.info(`Created backup at ${backup.backupDir} (${backup.backedUp} files)`);

@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { registerScanCommand } from './commands/scan';
 import { registerCoreRepairCommand } from './commands/core-repair';
 import { registerPluginReinstallCommand } from './commands/plugin-reinstall';
+import { registerThemeReinstallCommand } from './commands/theme-reinstall';
 import { registerFileExtractCommand } from './commands/file-extract';
 import { registerDbScanCommand } from './commands/db-scan';
 import { registerDbOptimizeCommand } from './commands/db-optimize';
@@ -74,6 +75,7 @@ program
 registerScanCommand(program, getOpts);
 registerCoreRepairCommand(program, getOpts);
 registerPluginReinstallCommand(program, getOpts);
+registerThemeReinstallCommand(program, getOpts);
 registerFileExtractCommand(program, getOpts);
 registerDbScanCommand(program, getOpts);
 registerDbOptimizeCommand(program, getOpts);

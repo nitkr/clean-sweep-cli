@@ -4,7 +4,7 @@ import winston from 'winston';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-const LOG_DIR = 'logs';
+const LOG_DIR = 'clean-sweep-cli/logs';
 const LOG_FILE = 'clean-sweep.log';
 
 function ensureLogDir(): void {
@@ -145,5 +145,5 @@ export function saveReport(report: ReportData, filePath: string): void {
 export function getDefaultReportPath(scanPath: string): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safePath = scanPath.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-  return path.join('reports', `scan-${safePath}-${timestamp}.json`);
+  return path.join('clean-sweep-cli', 'reports', `scan-${safePath}-${timestamp}.json`);
 }

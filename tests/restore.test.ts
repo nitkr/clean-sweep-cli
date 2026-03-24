@@ -33,7 +33,7 @@ function createQuarantineStructure(
   folderName: string,
   files: Record<string, string>
 ): string {
-  const quarantineDir = path.join(tempDir, 'quarantine', folderName);
+  const quarantineDir = path.join(tempDir, 'clean-sweep-cli', 'quarantine', folderName);
   fs.mkdirSync(quarantineDir, { recursive: true });
 
   for (const [relativePath, content] of Object.entries(files)) {
@@ -375,7 +375,7 @@ describe('Restore Command', () => {
 
   describe('edge cases', () => {
     it('should ignore non-directory entries in quarantine folder', async () => {
-      const quarantineBase = path.join(tempDir, 'quarantine');
+      const quarantineBase = path.join(tempDir, 'clean-sweep-cli', 'quarantine');
       fs.mkdirSync(quarantineBase, { recursive: true });
       fs.writeFileSync(path.join(quarantineBase, 'not-a-dir.txt'), 'content');
       createQuarantineStructure(tempDir, '2024-01-15T10-00-00', {

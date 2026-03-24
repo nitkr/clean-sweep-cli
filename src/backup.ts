@@ -9,7 +9,7 @@ export interface BackupResult {
 
 export function createBackup(targetPath: string): BackupResult {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(path.dirname(targetPath), 'backups', `wp-core-${timestamp}`);
+  const backupDir = path.join(path.dirname(targetPath), 'clean-sweep-cli', 'backups', `wp-core-${timestamp}`);
   
   fs.mkdirSync(backupDir, { recursive: true });
   
@@ -84,7 +84,7 @@ export function createPluginBackup(pluginsPath: string, pluginSlug: string): Plu
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(path.dirname(pluginsPath), 'backups', `plugin-${pluginSlug}-${timestamp}`);
+  const backupDir = path.join(path.dirname(pluginsPath), 'clean-sweep-cli', 'backups', `plugin-${pluginSlug}-${timestamp}`);
   
   fs.mkdirSync(backupDir, { recursive: true });
   copyRecursiveSync(pluginDir, path.join(backupDir, pluginSlug));
@@ -93,6 +93,33 @@ export function createPluginBackup(pluginsPath: string, pluginSlug: string): Plu
     success: true,
     backupPath: backupDir,
     pluginSlug,
+    filesBackedUp: 1,
+  };
+}
+
+export interface ThemeBackupResult {
+  success: boolean;
+  backupPath: string;
+  themeSlug: string;
+  filesBackedUp: number;
+}
+
+export function createThemeBackup(themesPath: string, themeSlug: string): ThemeBackupResult | null {
+  const themeDir = path.join(themesPath, themeSlug);
+  if (!fs.existsSync(themeDir)) {
+    return null;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupDir = path.join(path.dirname(themesPath), 'clean-sweep-cli', 'backups', `theme-${themeSlug}-${timestamp}`);
+  
+  fs.mkdirSync(backupDir, { recursive: true });
+  copyRecursiveSync(themeDir, path.join(backupDir, themeSlug));
+  
+  return {
+    success: true,
+    backupPath: backupDir,
+    themeSlug,
     filesBackedUp: 1,
   };
 }

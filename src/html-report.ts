@@ -357,7 +357,7 @@ export function generateHtmlReport(data: HtmlReportData): string {
 export function getDefaultHtmlReportPath(scanPath: string): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safePath = scanPath.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-  return path.join('reports', `scan-${safePath}-${timestamp}.html`);
+  return path.join('clean-sweep-cli', 'reports', `scan-${safePath}-${timestamp}.html`);
 }
 
 export function saveHtmlReport(html: string, filePath: string): void {

@@ -83,7 +83,7 @@ describe('Quarantine Command', () => {
       expect(result.filesQuarantined[0]).toContain('malware.php');
 
       expect(fs.existsSync(path.join(tempDir, 'malware.php'))).toBe(true);
-      expect(fs.existsSync(path.join(tempDir, 'quarantine'))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, 'clean-sweep-cli', 'quarantine'))).toBe(false);
     });
 
     it('should output human-readable format without --json', async () => {
@@ -116,7 +116,7 @@ describe('Quarantine Command', () => {
     });
 
     it('should not scan files in quarantine directory', async () => {
-      const quarantineSubDir = path.join(tempDir, 'quarantine', 'old-session');
+      const quarantineSubDir = path.join(tempDir, 'clean-sweep-cli', 'quarantine', 'old-session');
       fs.mkdirSync(quarantineSubDir, { recursive: true });
       fs.writeFileSync(path.join(quarantineSubDir, 'old-malware.php'), '<?php eval($cmd); ?>');
       fs.writeFileSync(path.join(tempDir, 'clean.php'), '<?php echo "hello"; ?>');
@@ -148,8 +148,8 @@ describe('Quarantine Command', () => {
       expect(result.success).toBe(true);
       expect(result.dryRun).toBe(false);
       expect(result.filesQuarantined.length).toBe(1);
-      expect(result.quarantineDir).toContain('quarantine');
-      expect(result.backupDir).toContain('quarantine-backup');
+      expect(result.quarantineDir).toContain('clean-sweep-cli/quarantine');
+      expect(result.backupDir).toContain('clean-sweep-cli/quarantine-backup');
 
       expect(fs.existsSync(path.join(tempDir, 'malware.php'))).toBe(false);
       expect(fs.existsSync(path.join(tempDir, 'safe.php'))).toBe(true);
@@ -168,7 +168,7 @@ describe('Quarantine Command', () => {
       const output = consoleSpy.mock.calls.map(c => c[0]).join('');
       const result = JSON.parse(output);
 
-      expect(result.quarantineDir).toMatch(/quarantine\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/);
+      expect(result.quarantineDir).toMatch(/clean-sweep-cli\/quarantine\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/);
     });
 
     it('should preserve original directory structure in quarantine', async () => {

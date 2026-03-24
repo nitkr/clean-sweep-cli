@@ -11,7 +11,16 @@ import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.json(),
-  transports: [new winston.transports.Console()],
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ level, message }) => {
+          return `[${level}] ${message}`;
+        })
+      ),
+    }),
+  ],
 });
 
 interface CliOptions {
@@ -55,10 +64,12 @@ export function registerCoreRepairCommand(
     .option('--path <path>', 'WordPress installation path')
     .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually perform the replacement', false)
+    .option('--backup', 'Create backup before repair (default: true)', true)
+    .option('--version <version>', 'Specific WordPress version to install (e.g., 6.4.2)')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
-      const dryRun = !cmdOptions.force && !opts.force;
+      const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
 
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
@@ -85,13 +96,20 @@ export function registerCoreRepairCommand(
       if (fs.existsSync(htaccessPath)) preserveList.push('.htaccess');
       if (fs.existsSync(robotsTxtPath)) preserveList.push('robots.txt');
 
-      logger.info(`Downloading WordPress core from wordpress.org`);
+      const version = cmdOptions.version;
+      const createBackupFlag = cmdOptions.backup !== false;
+      
+      const downloadUrl = version 
+        ? `https://wordpress.org/wordpress-${version}.tar.gz`
+        : 'https://wordpress.org/latest.tar.gz';
+      
+      logger.info(`Downloading WordPress${version ? ` ${version}` : ' latest'} from wordpress.org`);
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-core-'));
       const zipPath = path.join(tempDir, 'wordpress.tar.gz');
 
       try {
-        const response = await fetch('https://wordpress.org/latest.tar.gz');
+        const response = await fetch(downloadUrl);
         if (!response.ok) {
           throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
         }
@@ -139,9 +157,13 @@ export function registerCoreRepairCommand(
             console.log(`  - ${file}`);
           }
         } else {
-          const backupResult = createBackup(targetPath);
-          result.backupPath = backupResult.backupPath;
-          console.log(`Backup created at: ${backupResult.backupPath}`);
+          if (createBackupFlag) {
+            const backupResult = createBackup(targetPath);
+            result.backupPath = backupResult.backupPath;
+            console.log(`Backup created at: ${backupResult.backupPath}`);
+          } else {
+            console.log(`Skipping backup (--backup=false)`);
+          }
 
           for (const file of filesToReplace) {
             const srcPath = path.join(wordpressDir, file);

@@ -36,7 +36,7 @@ function formatOutput(data: unknown, useJson: boolean): void {
 }
 
 function getQuarantineFolders(targetPath: string): QuarantineFolder[] {
-  const quarantineBase = path.join(targetPath, 'quarantine');
+  const quarantineBase = path.join(targetPath, 'clean-sweep-cli', 'quarantine');
   if (!fs.existsSync(quarantineBase) || !fs.statSync(quarantineBase).isDirectory()) {
     return [];
   }
@@ -121,7 +121,7 @@ export function registerRestoreCommand(
       const opts = getOpts();
       const targetPath = path.resolve(cmdOptions.path || opts.path);
       const useJson = opts.json || cmdOptions.json;
-      const dryRun = !cmdOptions.force && !opts.force;
+      const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const folderName = cmdOptions.folder || undefined;
 
       if (!fs.existsSync(targetPath)) {

@@ -247,7 +247,7 @@ export function generateEmailScript(
 export function getDefaultScriptPath(scanPath: string): string {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const safePath = scanPath.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-  return path.join('reports', `email-${safePath}-${timestamp}.sh`);
+  return path.join('clean-sweep-cli', 'reports', `email-${safePath}-${timestamp}.sh`);
 }
 
 export function saveEmailScript(script: string, filePath: string): void {

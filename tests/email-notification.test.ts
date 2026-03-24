@@ -514,7 +514,7 @@ describe('Email Notification Module', () => {
 
     it('should include reports directory', () => {
       const scriptPath = getDefaultScriptPath('/test/path');
-      expect(scriptPath.startsWith('reports')).toBe(true);
+      expect(scriptPath.startsWith(path.join('clean-sweep-cli', 'reports'))).toBe(true);
     });
 
     it('should include .sh extension', () => {
@@ -542,7 +542,7 @@ describe('Email Notification Module', () => {
     it('should handle empty scanPath', () => {
       const scriptPath = getDefaultScriptPath('');
       expect(scriptPath).toBeDefined();
-      expect(scriptPath.startsWith('reports/')).toBe(true);
+      expect(scriptPath.startsWith(path.join('clean-sweep-cli', 'reports') + path.sep)).toBe(true);
     });
 
     it('should produce unique paths for different calls', async () => {

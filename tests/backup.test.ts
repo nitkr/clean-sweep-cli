@@ -83,7 +83,7 @@ describe('Backup Module', () => {
 
       expect(result.success).toBe(true);
       expect(result.filesBackedUp).toBeGreaterThan(0);
-      expect(result.backupPath).toContain('backups');
+      expect(result.backupPath).toContain(path.join('clean-sweep-cli', 'backups'));
       expect(result.backupPath).toContain('wp-core-');
       expect(fs.existsSync(result.backupPath)).toBe(true);
     });
@@ -143,7 +143,7 @@ describe('Backup Module', () => {
       expect(result?.success).toBe(true);
       expect(result?.pluginSlug).toBe(pluginSlug);
       expect(result?.filesBackedUp).toBe(1);
-      expect(result?.backupPath).toContain('backups');
+      expect(result?.backupPath).toContain(path.join('clean-sweep-cli', 'backups'));
       expect(result?.backupPath).toContain(`plugin-${pluginSlug}`);
     });
 

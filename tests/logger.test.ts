@@ -320,7 +320,7 @@ describe('Logger Module', () => {
 
     it('should include reports directory', () => {
       const reportPath = getDefaultReportPath('/test/path');
-      expect(reportPath.startsWith('reports')).toBe(true);
+      expect(reportPath.startsWith(path.join('clean-sweep-cli', 'reports'))).toBe(true);
     });
 
     it('should include scan prefix', () => {
@@ -371,7 +371,7 @@ describe('Logger Module', () => {
       it('should handle empty scanPath', () => {
         const reportPath = getDefaultReportPath('');
         expect(reportPath).toBeDefined();
-        expect(reportPath.startsWith('reports/')).toBe(true);
+        expect(reportPath.startsWith(path.join('clean-sweep-cli', 'reports') + path.sep)).toBe(true);
         expect(reportPath.endsWith('.json')).toBe(true);
       });
 
@@ -397,7 +397,7 @@ describe('Logger Module', () => {
       it('should handle path with forward slashes', () => {
         const reportPath = getDefaultReportPath('/a/b/c/d/e/f/g');
         expect(reportPath).toBeDefined();
-        expect(reportPath.startsWith('reports/')).toBe(true);
+        expect(reportPath.startsWith(path.join('clean-sweep-cli', 'reports') + path.sep)).toBe(true);
         expect(reportPath.endsWith('.json')).toBe(true);
       });
 
