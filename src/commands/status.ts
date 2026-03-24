@@ -127,8 +127,13 @@ export function getLastCoreUpdate(wpPath: string): string | null {
 
   try {
     const content = fs.readFileSync(optionDb, 'utf-8');
-    const match = content.match(/'last_update_check'\]/);
-    return match ? new Date().toISOString() : null;
+    // Match $option['last_update_check'] or $options['last_update_check'] = 'timestamp';
+    const match = content.match(/\$options?\['last_update_check'\]\s*=\s*['"]([^'"]+)['"]/);
+    if (match && match[1]) {
+      const date = new Date(match[1]);
+      return isNaN(date.getTime()) ? null : date.toISOString();
+    }
+    return null;
   } catch {
     return null;
   }

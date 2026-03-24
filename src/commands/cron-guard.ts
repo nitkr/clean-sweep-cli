@@ -54,7 +54,7 @@ export function isCleanSweepLine(line: string): boolean {
 
 export function isDisabledCleanSweepLine(line: string): boolean {
   const trimmed = line.trimStart();
-  return trimmed.startsWith('#') && trimmed.includes(CLEAN_SWEEP_MARKER);
+  return trimmed.startsWith('# ') && trimmed.includes(CLEAN_SWEEP_MARKER);
 }
 
 export function parseCrontab(crontab: string): CronJob[] {

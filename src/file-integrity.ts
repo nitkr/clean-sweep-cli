@@ -94,10 +94,7 @@ export async function checkWordPressIntegrity(
       const relativePath = path.relative(targetPath, file);
       const fileName = path.basename(file);
       
-      if (relativePath.startsWith('wp-includes') || relativePath.startsWith('wp-admin')) {
-        continue;
-      }
-      
+      // Check if this file has a known hash (only root-level core files are tracked)
       if (CORE_WORDPRESS_FILES[fileName]) {
         const expectedHash = CORE_WORDPRESS_FILES[fileName];
         if (computedHash !== expectedHash) {
@@ -105,6 +102,8 @@ export async function checkWordPressIntegrity(
           result.modifiedFiles.push(relativePath);
         }
       }
+      // Note: Files in wp-includes and wp-admin subdirectories are checked (counted)
+      // but only root-level files have known hashes to compare against
     } catch {
       // Skip files that can't be read
     }

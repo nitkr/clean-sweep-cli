@@ -187,7 +187,7 @@ export function generateOptimizationScript(tasks: OptimizationTask[], dbCredenti
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i];
     lines.push(`# Task ${i + 1}: ${task.action} on ${task.table}`);
-    lines.push(`echo "[$(( ${i + 1} / ${tasks.length} ))] ${task.action}..."`);
+    lines.push(`echo "[${i + 1}/${tasks.length}] ${task.action}..."`);
     lines.push(`$MYSQL_CMD -e "${task.query.replace(/"/g, '\\"')}"`);
     lines.push('');
   }
