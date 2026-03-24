@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 export interface ConfigIssue {
   type: 'syntax_error' | 'insecure_config' | 'debug_enabled' | 'deprecated_constant' | 'weak_security';
@@ -304,7 +305,18 @@ export function registerConfigValidateCommand(
       if (cmdOptions.configFile) {
         targetPath = path.resolve(cmdOptions.configFile);
       } else {
-        const basePath = path.resolve(cmdOptions.path || opts.path);
+        let basePath = path.resolve(cmdOptions.path || opts.path);
+        const wpResult = detectWordPressRoot(basePath);
+        if (!wpResult.found) {
+          const error = { error: formatWpPathError(wpResult, 'config:validate'), path: basePath };
+          if (useJson) {
+            console.log(JSON.stringify(error, null, 2));
+          } else {
+            console.error(`Error: ${error.error}`);
+          }
+          process.exit(1);
+        }
+        basePath = wpResult.path;
         targetPath = path.join(basePath, 'wp-config.php');
       }
 

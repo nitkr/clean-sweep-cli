@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { exec } from 'child_process';
 import { parseWpConfig, DbCredentials } from './db-scan';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 interface CliOptions {
   dryRun: boolean;
@@ -261,22 +262,36 @@ export function registerDbOptimizeCommand(
   program
     .command('db:optimize')
     .description('Generate WordPress database optimization queries and scripts')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--db-host <host>', 'Database host (optional if wp-config.php exists)')
     .option('--db-name <name>', 'Database name (optional if wp-config.php exists)')
     .option('--db-user <user>', 'Database user (optional if wp-config.php exists)')
     .option('--db-pass <pass>', 'Database password (optional if wp-config.php exists)')
-    .option('--dry-run', 'Preview optimization queries without executing', true)
+    .option('--dry-run', 'Preview optimization queries without executing', false)
     .option('--force', 'Generate optimization script and skip dry-run', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const targetPath = path.resolve(cmdOptions.path || opts.path);
-      const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
+      let targetPath = path.resolve(cmdOptions.path || opts.path);
+      const dryRun = !cmdOptions.force && !opts.force;
 
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
+      }
+
+      const wpResult = detectWordPressRoot(targetPath);
+      if (!wpResult.found && !cmdOptions.dbHost) {
+        const error = {
+          success: false,
+          error: formatWpPathError(wpResult, 'db:optimize'),
+          path: targetPath,
+        };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
+      if (wpResult.found) {
+        targetPath = wpResult.path;
       }
 
       const wpConfigPath = path.join(targetPath, 'wp-config.php');

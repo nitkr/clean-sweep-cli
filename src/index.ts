@@ -59,7 +59,7 @@ program
   .name('clean-sweep')
   .description('CLI tool for cleaning and managing project files')
   .version('1.0.0')
-  .option('--dry-run', 'Preview changes without applying them', true)
+  .option('--dry-run', 'Preview changes without applying them', false)
   .option('--force', 'Skip confirmation prompts', false)
   .option('--json', 'Output results as JSON', false)
   .option('--path <path>', 'Target path to operate on', process.cwd())

@@ -241,7 +241,7 @@ describe('CLI Integration Tests', () => {
     it('status --json returns valid JSON with status fields', async () => {
       const { stdout, code } = await runCli([
         'status',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--json',
       ]);
 
@@ -339,7 +339,7 @@ describe('CLI Integration Tests', () => {
     it('status --json output is valid JSON', async () => {
       const { stdout, code } = await runCli([
         'status',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--json',
       ]);
 
@@ -408,7 +408,7 @@ describe('CLI Integration Tests', () => {
     it('status --verbose flag works', async () => {
       const { stdout, code } = await runCli([
         'status',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--verbose',
         '--json',
       ]);
@@ -481,7 +481,7 @@ describe('CLI Integration Tests', () => {
     it('status output has correct field types', async () => {
       const { stdout, code } = await runCli([
         'status',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--json',
       ]);
 
@@ -516,7 +516,7 @@ describe('CLI Integration Tests', () => {
     it('status --json output can be parsed with JSON.parse directly', async () => {
       const { stdout, code } = await runCli([
         'status',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--json',
       ]);
 
@@ -578,7 +578,7 @@ describe('CLI Integration Tests', () => {
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('success');
       expect(output.success).toBe(false);
-      expect(output.error).toContain('wp-config.php');
+      expect(output.error).toContain('WordPress installation not found');
     });
 
     it('returns error when database credentials are incomplete', async () => {
@@ -670,7 +670,7 @@ describe('CLI Integration Tests', () => {
       expect(output).toHaveProperty('success');
       expect(output.success).toBe(false);
       expect(output).toHaveProperty('error');
-      expect(output.error).toContain('wp-config.php');
+      expect(output.error).toContain('WordPress installation not found');
     });
   });
 
@@ -828,11 +828,12 @@ describe('CLI Integration Tests', () => {
         '--dry-run',
       ]);
 
-      expect(code).toBe(0);
+      expect(code).toBe(1);
 
       const output = extractLastJson(stdout) as Record<string, unknown>;
       expect(output).toHaveProperty('success');
-      expect(output.success).toBe(true);
+      expect(output.success).toBe(false);
+      expect(output).toHaveProperty('error');
     }, 30000);
   });
 
@@ -840,7 +841,7 @@ describe('CLI Integration Tests', () => {
     it('plugin:reinstall --dry-run outputs expected dry-run format in text mode', async () => {
       const { stdout, code } = await runCli([
         'plugin:reinstall',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--plugin', 'akismet',
         '--dry-run',
       ]);
@@ -856,7 +857,7 @@ describe('CLI Integration Tests', () => {
     it('plugin:reinstall --json outputs valid JSON format', async () => {
       const { stdout, code } = await runCli([
         'plugin:reinstall',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--plugin', 'akismet',
         '--json',
         '--dry-run',
@@ -922,7 +923,7 @@ describe('CLI Integration Tests', () => {
     it('shows files to replace and preserve in output', async () => {
       const { stdout, code } = await runCli([
         'core:repair',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--dry-run',
       ]);
 
@@ -936,7 +937,7 @@ describe('CLI Integration Tests', () => {
     it('returns valid JSON with expected properties', async () => {
       const { stdout, code } = await runCli([
         'core:repair',
-        '--path', CLEAN_FIXTURE,
+        '--path', WP_COMPLETE_FIXTURE,
         '--json',
         '--dry-run',
       ]);

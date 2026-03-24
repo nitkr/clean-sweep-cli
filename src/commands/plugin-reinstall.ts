@@ -6,6 +6,7 @@ import fetch from 'node-fetch';
 import AdmZip from 'adm-zip';
 import winston from 'winston';
 import { createPluginBackup } from '../backup';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -51,15 +52,15 @@ export function registerPluginReinstallCommand(
   program
     .command('plugin:reinstall')
     .description('Reinstall an official WordPress.org plugin')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--plugin <slug>', 'Plugin slug to reinstall (e.g., akismet, wordpress-seo)')
-    .option('--dry-run', 'Preview changes without applying them', true)
+    .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually perform the reinstall', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const targetPath = path.resolve(cmdOptions.path || opts.path);
+      let targetPath = path.resolve(cmdOptions.path || opts.path);
       const pluginSlug = cmdOptions.plugin;
-      const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
+      const dryRun = !cmdOptions.force && !opts.force;
 
       if (!pluginSlug) {
         const error = { success: false, error: 'Plugin slug is required. Use --plugin <slug>' };
@@ -72,6 +73,14 @@ export function registerPluginReinstallCommand(
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
+
+      const wpResult = detectWordPressRoot(targetPath);
+      if (!wpResult.found) {
+        const error = { success: false, error: formatWpPathError(wpResult, 'plugin:reinstall'), path: targetPath };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
+      targetPath = wpResult.path;
 
       const pluginsPath = path.join(targetPath, 'wp-content', 'plugins');
       const pluginDir = path.join(pluginsPath, pluginSlug);

@@ -6,6 +6,7 @@ import fetch from 'node-fetch';
 import * as tar from 'tar';
 import winston from 'winston';
 import { createBackup, CoreRepairResult } from '../backup';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -52,12 +53,12 @@ export function registerCoreRepairCommand(
     .command('core:repair')
     .description('Repair WordPress core files by replacing with fresh download')
     .option('--path <path>', 'WordPress installation path')
-    .option('--dry-run', 'Preview changes without applying them', true)
+    .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually perform the replacement', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const targetPath = path.resolve(cmdOptions.path || opts.path);
-      const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
+      let targetPath = path.resolve(cmdOptions.path || opts.path);
+      const dryRun = !cmdOptions.force && !opts.force;
 
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
@@ -65,17 +66,18 @@ export function registerCoreRepairCommand(
         process.exit(1);
       }
 
+      const wpResult = detectWordPressRoot(targetPath);
+      if (!wpResult.found) {
+        const error = { success: false, error: formatWpPathError(wpResult, 'core:repair'), path: targetPath };
+        formatOutput(error, opts.json || cmdOptions.json);
+        process.exit(1);
+      }
+      targetPath = wpResult.path;
+
       const wpConfigPath = path.join(targetPath, 'wp-config.php');
       const wpContentPath = path.join(targetPath, 'wp-content');
       const htaccessPath = path.join(targetPath, '.htaccess');
       const robotsTxtPath = path.join(targetPath, 'robots.txt');
-
-      const isWordPress = fs.existsSync(wpConfigPath) || fs.existsSync(wpContentPath);
-      if (!isWordPress) {
-        const error = { success: false, error: 'Not a valid WordPress installation', path: targetPath };
-        formatOutput(error, opts.json || cmdOptions.json);
-        process.exit(1);
-      }
 
       const preserveList: string[] = [];
       if (fs.existsSync(wpConfigPath)) preserveList.push('wp-config.php');

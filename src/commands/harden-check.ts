@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
 import fg from 'fast-glob';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 export interface HtaccessCheck {
   file: string;
@@ -472,7 +473,7 @@ export function registerHardenCheckCommand(
     .option('--json', 'Output results as JSON', false)
     .action((cmdOptions) => {
       const opts = getOpts();
-      const targetPath = path.resolve(cmdOptions.path || opts.path);
+      let targetPath = path.resolve(cmdOptions.path || opts.path);
       const useJson = cmdOptions.json || opts.json;
 
       if (!fs.existsSync(targetPath)) {
@@ -494,6 +495,18 @@ export function registerHardenCheckCommand(
         }
         process.exit(1);
       }
+
+      const wpResult = detectWordPressRoot(targetPath);
+      if (!wpResult.found) {
+        const error = { error: formatWpPathError(wpResult, 'harden:check'), path: targetPath };
+        if (useJson) {
+          console.log(JSON.stringify(error, null, 2));
+        } else {
+          console.error(`Error: ${error.error}`);
+        }
+        process.exit(1);
+      }
+      targetPath = wpResult.path;
 
       if (!useJson) {
         console.log(`Checking WordPress security hardening in: ${targetPath}`);

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 interface CliOptions {
   dryRun: boolean;
@@ -144,7 +145,7 @@ export function registerStatusCommand(
     .option('--json', 'Output results as JSON', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const targetPath = path.resolve(cmdOptions.path || opts.path);
+      let targetPath = path.resolve(cmdOptions.path || opts.path);
       const useJson = opts.json || cmdOptions.json;
 
       if (!fs.existsSync(targetPath)) {
@@ -159,6 +160,14 @@ export function registerStatusCommand(
         formatOutput(error, useJson);
         process.exit(1);
       }
+
+      const wpResult = detectWordPressRoot(targetPath);
+      if (!wpResult.found) {
+        const error = { error: formatWpPathError(wpResult, 'status'), path: targetPath };
+        formatOutput(error, useJson);
+        process.exit(1);
+      }
+      targetPath = wpResult.path;
 
       const result: StatusResult = {
         version: getWpVersion(targetPath),

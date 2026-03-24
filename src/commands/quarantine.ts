@@ -141,7 +141,7 @@ export function registerQuarantineCommand(
     .command('quarantine')
     .description('Quarantine infected files by moving them to a quarantine folder')
     .option('--path <path>', 'Directory to scan for threats')
-    .option('--dry-run', 'Preview what would be quarantined without moving files', true)
+    .option('--dry-run', 'Preview what would be quarantined without moving files', false)
     .option('--force', 'Actually quarantine infected files (requires explicit flag)', false)
     .option('--json', 'Output results as JSON', false)
     .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')

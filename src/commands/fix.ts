@@ -377,7 +377,7 @@ export function registerFixCommand(
     .command('fix')
     .description('Automatically fix common security issues (permissions, config, hardening)')
     .option('--path <path>', 'Target directory to fix')
-    .option('--dry-run', 'Preview changes without applying them (default)', true)
+    .option('--dry-run', 'Preview changes without applying them (default)', false)
     .option('--force', 'Actually apply fixes', false)
     .option('--json', 'Output results as JSON', false)
     .action((cmdOptions) => {

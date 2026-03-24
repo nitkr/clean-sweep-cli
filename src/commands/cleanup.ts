@@ -26,7 +26,7 @@ export function registerCleanupCommand(
   program
     .command('cleanup')
     .description('Remove Clean Sweep toolkit files from a WordPress installation')
-    .option('--path <path>', 'WordPress installation path', getOpts().path)
+    .option('--path <path>', 'WordPress installation path')
     .option('--force', 'Actually remove the files (required - never runs automatically)', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();

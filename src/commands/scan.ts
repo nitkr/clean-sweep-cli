@@ -9,6 +9,7 @@ import { findUnknownFiles, UnknownFilesResult } from '../wp-file-detector';
 import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefaultReportPath } from '../logger';
 import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
 import { loadWhitelist, applyWhitelist, WhitelistConfig } from '../whitelist';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 interface CliOptions {
   dryRun: boolean;
@@ -136,10 +137,17 @@ export function registerScanCommand(
     .option('--whitelist-file <path>', 'Path to custom whitelist JSON file')
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const targetPath = cmdOptions.path || opts.path;
+      let targetPath = cmdOptions.path || opts.path;
       const verbose = opts.verbose || cmdOptions.verbose;
-      const report = cmdOptions.report ?? opts.report;
-      const htmlReport = cmdOptions.htmlReport ?? opts.htmlReport;
+
+      if (!cmdOptions.path) {
+        const wpResult = detectWordPressRoot(targetPath);
+        if (wpResult.found) {
+          targetPath = wpResult.path;
+        }
+      }
+      const report = cmdOptions.report || opts.report;
+      const htmlReport = cmdOptions.htmlReport || opts.htmlReport;
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
 
       const logger = createLogger(logLevel);

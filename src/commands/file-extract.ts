@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import AdmZip from 'adm-zip';
 import { isWordPressInstallation } from '../wp-file-detector';
+import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 interface CliOptions {
   dryRun: boolean;
@@ -60,14 +61,14 @@ export function registerFileExtractCommand(
     .option('--path <path>', 'WordPress installation path')
     .option('--zip <path>', 'Path to ZIP file to extract (required)')
     .option('--target <dir>', 'Target directory (default: wp-content/uploads/)', 'wp-content/uploads/')
-    .option('--dry-run', 'Preview changes without applying them', true)
+    .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually extract the ZIP file', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      const wpPath = path.resolve(cmdOptions.path || opts.path || process.cwd());
+      let wpPath = path.resolve(cmdOptions.path || opts.path || process.cwd());
       const zipPath = cmdOptions.zip;
       const targetDir = cmdOptions.target || 'wp-content/uploads/';
-      const dryRun = cmdOptions.force ? false : (opts.dryRun || cmdOptions.dryRun);
+      const dryRun = !cmdOptions.force && !opts.force;
 
       if (!zipPath) {
         const error = { success: false, error: 'ZIP file path is required. Use --zip <path>' };
@@ -81,11 +82,13 @@ export function registerFileExtractCommand(
         process.exit(1);
       }
 
-      if (!isWordPressInstallation(wpPath)) {
-        const error = { success: false, error: 'Path is not a valid WordPress installation', path: wpPath };
+      const wpResult = detectWordPressRoot(wpPath);
+      if (!wpResult.found) {
+        const error = { success: false, error: formatWpPathError(wpResult, 'file:extract'), path: wpPath };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
+      wpPath = wpResult.path;
 
       if (!fs.existsSync(zipPath)) {
         const error = { success: false, error: 'ZIP file does not exist', zipPath };

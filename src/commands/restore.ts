@@ -113,7 +113,7 @@ export function registerRestoreCommand(
     .description('Restore quarantined files to their original locations')
     .option('--path <path>', 'Target path containing quarantine folder')
     .option('--folder <name>', 'Specific quarantine folder to restore from')
-    .option('--dry-run', 'Preview what would be restored without moving files', true)
+    .option('--dry-run', 'Preview what would be restored without moving files', false)
     .option('--force', 'Actually restore the files', false)
     .option('--json', 'Output results as JSON', false)
     .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
