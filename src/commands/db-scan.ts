@@ -202,9 +202,15 @@ async function scanDatabase(
   
   const tables = [
     { name: `${dbCredentials.prefix}posts`, column: 'post_content' },
+    { name: `${dbCredentials.prefix}postmeta`, column: 'meta_value' },
     { name: `${dbCredentials.prefix}comments`, column: 'comment_content' },
+    { name: `${dbCredentials.prefix}commentmeta`, column: 'meta_value' },
     { name: `${dbCredentials.prefix}options`, column: 'option_value' },
     { name: `${dbCredentials.prefix}users`, column: 'user_pass' },
+    { name: `${dbCredentials.prefix}usermeta`, column: 'meta_value' },
+    { name: `${dbCredentials.prefix}terms`, column: 'name' },
+    { name: `${dbCredentials.prefix}term_taxonomy`, column: 'description' },
+    { name: `${dbCredentials.prefix}links`, column: 'link_description' },
   ];
   
   const scannedTables: string[] = [];

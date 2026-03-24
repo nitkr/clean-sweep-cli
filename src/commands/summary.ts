@@ -134,7 +134,7 @@ export function riskLevelFromScore(score: number): string {
 }
 
 async function scanDirectory(targetPath: string): Promise<Threat[]> {
-  const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
+  const ignore = ['**/node_modules/**', '**/vendor/**', '**/dist/**', '**/.git/**'];
   const files = await fg('**/*', {
     cwd: targetPath,
     absolute: true,

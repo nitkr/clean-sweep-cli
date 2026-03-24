@@ -61,7 +61,7 @@ function scanSingleDirectory(
   logger: ReturnType<typeof createLogger>,
   whitelist?: WhitelistConfig
 ): DirectoryResult {
-  const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
+  const ignore = ['**/node_modules/**', '**/vendor/**', '**/dist/**', '**/.git/**'];
   const files = fg.sync('**/*', { cwd: targetPath, absolute: true, onlyFiles: true, ignore });
   const directories = fg.sync('**/*', { cwd: targetPath, absolute: true, onlyDirectories: true, ignore });
 

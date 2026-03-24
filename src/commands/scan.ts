@@ -66,7 +66,7 @@ async function scanDirectory(
   logger: ReturnType<typeof createLogger>,
   whitelist?: WhitelistConfig
 ): Promise<ScanResult> {
-  const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
+  const ignore = ['**/node_modules/**', '**/vendor/**', '**/dist/**', '**/.git/**'];
   const [files, directories] = await Promise.all([
     fg('**/*', { cwd: targetPath, absolute: true, onlyFiles: true, ignore }),
     fg('**/*', { cwd: targetPath, absolute: true, onlyDirectories: true, ignore }),

@@ -34,8 +34,6 @@ interface CliOptions {
 function formatOutput(data: unknown, useJson: boolean): void {
   if (useJson) {
     console.log(JSON.stringify(data, null, 2));
-  } else {
-    console.log(data);
   }
 }
 
