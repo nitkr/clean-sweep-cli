@@ -13,12 +13,9 @@ These flags work with all commands:
 | `--json` | Output results as JSON | `false` |
 | `--path <path>` | Target path to operate on | `process.cwd()` |
 | `--verbose` | Show detailed threat information | `false` |
-| `--check-vulnerabilities` | Check for known WordPress vulnerabilities | `false` |
-| `--check-integrity` | Check WordPress core file integrity | `false` |
-| `--find-unknown` | Find unknown files not part of WordPress core | `false` |
-| `--report` | Save JSON report to file | `false` |
-| `--html-report` | Save HTML report to file | `false` |
 | `--log-level <level>` | Logging verbosity: `debug`, `info`, `warn`, `error` | `info` |
+
+**Note:** The following flags are only available for the `scan` command: `--check-vulnerabilities`, `--check-integrity`, `--find-unknown`, `--report`, `--html-report`.
 
 ---
 
