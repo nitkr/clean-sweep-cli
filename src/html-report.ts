@@ -92,8 +92,13 @@ function generateThreatRow(threat: Threat): string {
   const bgColor = getSeverityBgColor(severity);
   const lineInfo = threat.line !== null ? `:${threat.line}` : '';
 
+  // Truncate signature for display but keep full version for expandable section
+  const displaySignature = threat.signature.length > 80 
+    ? threat.signature.substring(0, 80) + '...' 
+    : threat.signature;
+
   return `
-    <tr style="background-color: ${bgColor};">
+    <tr style="background-color: ${bgColor}; border-left: 4px solid ${color};">
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
         <code style="font-size: 13px; color: #374151;">${escapeHtml(threat.file)}${lineInfo}</code>
       </td>
@@ -113,7 +118,14 @@ function generateThreatRow(threat: Threat): string {
         <code style="font-size: 13px; color: #6b7280;">${escapeHtml(threat.type)}</code>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-        <code style="font-size: 12px; color: #9ca3af; word-break: break-all;">${escapeHtml(threat.signature)}</code>
+        <details style="margin: 0;">
+          <summary style="cursor: pointer; list-style: none; font-family: monospace; font-size: 12px; color: #9ca3af; word-break: break-all;">
+            ${escapeHtml(displaySignature)}
+          </summary>
+          <div style="margin-top: 8px; padding: 8px; background: #1f2937; border-radius: 4px; overflow-x: auto;">
+            <code style="font-size: 11px; color: #e5e7eb; word-break: break-all; white-space: pre-wrap;">${escapeHtml(threat.signature)}</code>
+          </div>
+        </details>
       </td>
     </tr>`;
 }
@@ -148,6 +160,94 @@ function generateSummaryStats(scanResult: ScanResult): string {
       <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">${card.label}</div>
     </div>
   `).join('');
+}
+
+function generateThreatDistributionChart(scanResult: ScanResult): string {
+  const threatCount = scanResult.threats.length;
+  if (threatCount === 0) {
+    return '';
+  }
+
+  const criticalCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'critical').length;
+  const highCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'high').length;
+  const mediumCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'medium').length;
+  const lowCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'low').length;
+
+  // Calculate percentages for SVG arcs
+  const total = threatCount;
+  const criticalPct = (criticalCount / total) * 100;
+  const highPct = (highCount / total) * 100;
+  const mediumPct = (mediumCount / total) * 100;
+  const lowPct = (lowCount / total) * 100;
+
+  // SVG donut chart - using conic-gradient alternative with stroke-dasharray
+  // Full circle = 100, radius = 15.9155 (circumference / 2pi)
+  const circumference = 100;
+  let offset = 0;
+  const segments: string[] = [];
+
+  const addSegment = (pct: number, color: string, label: string, count: number) => {
+    if (pct <= 0) return;
+    const dashLength = (pct / 100) * circumference;
+    const dashGap = circumference - dashLength;
+    segments.push(`<circle cx="40" cy="40" r="15.9155" fill="none" stroke="${color}" stroke-width="8" stroke-dasharray="${dashLength} ${dashGap}" stroke-dashoffset="${-offset}" transform="rotate(-90 40 40)"/>`);
+    offset += dashLength;
+  };
+
+  addSegment(criticalPct, '#dc2626', 'Critical', criticalCount);
+  addSegment(highPct, '#ea580c', 'High', highCount);
+  addSegment(mediumPct, '#d97706', 'Medium', mediumCount);
+  addSegment(lowPct, '#ca8a04', 'Low', lowCount);
+
+  return `
+    <div style="background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 24px;">
+      <h2 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 16px;">Threat Distribution</h2>
+      <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+        <svg width="80" height="80" viewBox="0 0 80 80" style="flex-shrink: 0;">
+          ${segments.join('')}
+          <circle cx="40" cy="40" r="11" fill="white"/>
+        </svg>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px 24px;">
+          ${criticalCount > 0 ? `<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #dc2626; border-radius: 2px;"></span><span style="font-size: 13px; color: #374151;">Critical: ${criticalCount}</span></div>` : ''}
+          ${highCount > 0 ? `<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #ea580c; border-radius: 2px;"></span><span style="font-size: 13px; color: #374151;">High: ${highCount}</span></div>` : ''}
+          ${mediumCount > 0 ? `<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #d97706; border-radius: 2px;"></span><span style="font-size: 13px; color: #374151;">Medium: ${mediumCount}</span></div>` : ''}
+          ${lowCount > 0 ? `<div style="display: flex; align-items: center; gap: 6px;"><span style="width: 12px; height: 12px; background: #ca8a04; border-radius: 2px;"></span><span style="font-size: 13px; color: #374151;">Low: ${lowCount}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+function generateExecutiveSummary(scanResult: ScanResult, vulnerabilities?: Vulnerability[]): string {
+  const threatCount = scanResult.threats.length;
+  const criticalCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'critical').length;
+  const highCount = scanResult.threats.filter(t => getSeverityForThreatType(t.type) === 'high').length;
+  const vulnCount = vulnerabilities?.length || 0;
+
+  let summary = '';
+
+  if (scanResult.safe && (!vulnerabilities || vulnerabilities.length === 0)) {
+    summary = `This WordPress installation appears to be secure. ${scanResult.totalFiles} files were scanned and no malware signatures or known vulnerabilities were detected. Continue monitoring regularly to maintain a strong security posture.`;
+  } else if (criticalCount > 0) {
+    summary = `CRITICAL SECURITY ALERT: ${criticalCount} critical threat${criticalCount > 1 ? 's' : ''} detected. Immediate action is required. ${threatCount} total threat${threatCount > 1 ? 's' : ''} and ${vulnCount} known vulnerabilit${vulnCount === 1 ? 'y' : 'ies'} were found. Review and remediate immediately.`;
+  } else if (highCount > 0) {
+    summary = `Security warning: ${highCount} high-severity issue${highCount > 1 ? 's' : ''} detected along with ${threatCount - highCount} additional threat${threatCount - highCount !== 1 ? 's' : ''}. These pose significant risk and should be addressed promptly.`;
+  } else if (threatCount > 0) {
+    summary = `${threatCount} potential threat${threatCount > 1 ? 's' : ''} detected. While not critical, these should be reviewed and remediated as part of good security hygiene.`;
+  } else if (vulnCount > 0) {
+    summary = `No malware detected, but ${vulnCount} known vulnerabilit${vulnCount === 1 ? 'y' : 'ies'} were found in your WordPress components. Update affected plugins, themes, or WordPress core to patch these vulnerabilities.`;
+  } else {
+    summary = `Scan completed. ${scanResult.totalFiles} files were analyzed. No immediate threats or known vulnerabilities detected.`;
+  }
+
+  const bgColor = scanResult.safe ? '#eff6ff' : '#fffbeb';
+  const borderColor = scanResult.safe ? '#bfdbfe' : '#fef3c7';
+  const textColor = scanResult.safe ? '#1e40af' : '#92400e';
+
+  return `
+    <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
+      <div style="font-size: 14px; font-weight: 600; color: ${textColor}; margin-bottom: 4px;">Executive Summary</div>
+      <div style="font-size: 14px; color: ${textColor}; line-height: 1.5;">${summary}</div>
+    </div>`;
 }
 
 function generateVulnerabilitySection(vulnerabilities: Vulnerability[]): string {
@@ -275,10 +375,15 @@ export function generateHtmlReport(data: HtmlReportData): string {
   <title>Clean Sweep Security Report</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #1f2937; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f3f4f6; color: #1f2937; line-height: 1.5; }
     .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    h2 { font-size: 20px; font-weight: 600; color: #1f2937; letter-spacing: -0.25px; }
+    code { font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace; }
     @media (max-width: 768px) {
       .container { padding: 12px; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 18px; }
     }
   </style>
 </head>
@@ -305,22 +410,37 @@ export function generateHtmlReport(data: HtmlReportData): string {
       </span>
     </div>
 
+    ${generateExecutiveSummary(scanResult, vulnerabilities)}
+
+    ${scanResult.threats.length > 0 ? generateThreatDistributionChart(scanResult) : ''}
+
     <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px;">
       ${generateSummaryStats(scanResult)}
     </div>
 
     ${scanResult.threats.length > 0 ? `
       <div style="margin-bottom: 32px;">
-        <h2 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-bottom: 16px;">
-          Threats Found (${scanResult.threats.length})
-        </h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <h2 style="font-size: 20px; font-weight: 600; color: #1f2937;" id="threatsHeading" data-total="${scanResult.threats.length}">
+            Threats Found (${scanResult.threats.length})
+            <span id="threatCountDisplay" style="display:none;"></span>
+          </h2>
+          <input type="text" id="threatSearch" placeholder="Search threats..." style="
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 250px;
+            max-width: 100%;
+          " onkeyup="filterThreats()">
+        </div>
         <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <table id="threatsTable" style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
             <thead>
               <tr style="background-color: #f9fafb;">
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">File</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Severity</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Type</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; cursor: pointer;" onclick="sortThreats(0)">File &#8597;</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; cursor: pointer;" onclick="sortThreats(1)">Severity &#8597;</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; cursor: pointer;" onclick="sortThreats(2)">Type &#8597;</th>
                 <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Signature</th>
               </tr>
             </thead>
@@ -328,6 +448,49 @@ export function generateHtmlReport(data: HtmlReportData): string {
           </table>
         </div>
       </div>
+      <script>
+        function filterThreats() {
+          const input = document.getElementById('threatSearch');
+          const filter = input.value.toLowerCase();
+          const table = document.getElementById('threatsTable');
+          const heading = document.getElementById('threatsHeading');
+          const total = parseInt(heading.getAttribute('data-total') || '0', 10);
+          const rows = table.getElementsByTagName('tr');
+          let visibleCount = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const text = rows[i].textContent || rows[i].innerText;
+            if (text.toLowerCase().indexOf(filter) > -1) {
+              rows[i].style.display = '';
+              visibleCount++;
+            } else {
+              rows[i].style.display = 'none';
+            }
+          }
+          const countText = visibleCount === total ? '' : ' (' + visibleCount + ' of ' + total + ')';
+          heading.firstChild.textContent = 'Threats Found' + countText;
+        }
+        function sortThreats(n) {
+          const table = document.getElementById('threatsTable');
+          let switching = true, dir = 'asc', shouldSwitch, i, rows;
+          while (switching) {
+            switching = false;
+            rows = table.rows;
+            for (i = 1; i < rows.length - 1; i++) {
+              shouldSwitch = false;
+              const x = rows[i].getElementsByTagName('td')[n];
+              const y = rows[i + 1].getElementsByTagName('td')[n];
+              if (dir === 'asc' ? x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase() : x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                shouldSwitch = true;
+                break;
+              }
+            }
+            if (shouldSwitch) {
+              rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+              switching = true;
+            }
+          }
+        }
+      </script>
     ` : `
       <div style="
         padding: 24px;
