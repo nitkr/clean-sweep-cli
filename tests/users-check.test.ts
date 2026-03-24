@@ -63,6 +63,19 @@ describe('Users Check Command', () => {
     consoleWarnSpy.mockRestore();
   });
 
+  // Helper to create minimal WordPress installation for CLI tests
+  function createWordPressInstall(dir: string): void {
+    const wpConfigContent = [
+      "<?php",
+      "define('DB_NAME', 'test_db');",
+      "define('DB_USER', 'test_user');",
+      "define('DB_PASSWORD', 'test_pass');",
+      "define('DB_HOST', 'localhost');",
+      "$table_prefix = 'wp_';",
+    ].join('\n');
+    fs.writeFileSync(path.join(dir, 'wp-config.php'), wpConfigContent);
+  }
+
   function createProgram() {
     const program = new Command();
     program.exitOverride();
@@ -489,6 +502,7 @@ describe('Users Check Command', () => {
 
   describe('JSON output', () => {
     it('should produce valid JSON with --json flag', async () => {
+      createWordPressInstall(tempDir);
       const content = [
         "$user = new stdClass();",
         "$user->ID = '1';",
@@ -550,6 +564,7 @@ describe('Users Check Command', () => {
     });
 
     it('should produce valid JSON when no users found', async () => {
+      createWordPressInstall(tempDir);
       const program = createProgram();
       registerUsersCheckCommand(program, createTestCliOptions({ json: true }));
 
@@ -577,6 +592,7 @@ describe('Users Check Command', () => {
 
   describe('human-readable output', () => {
     it('should print check info without --json', async () => {
+      createWordPressInstall(tempDir);
       const content = [
         "$user = new stdClass();",
         "$user->ID = '1';",
@@ -609,6 +625,7 @@ describe('Users Check Command', () => {
     });
 
     it('should warn when no user data found', async () => {
+      createWordPressInstall(tempDir);
       const program = createProgram();
       registerUsersCheckCommand(program, createTestCliOptions({ json: false }));
 
@@ -630,6 +647,7 @@ describe('Users Check Command', () => {
     });
 
     it('should display issues with severity tags', async () => {
+      createWordPressInstall(tempDir);
       const content = [
         "$user = new stdClass();",
         "$user->ID = '1';",
@@ -663,6 +681,7 @@ describe('Users Check Command', () => {
 
   describe('exit codes', () => {
     it('should exit 1 when high severity issues found', async () => {
+      createWordPressInstall(tempDir);
       const content = [
         "$user = new stdClass();",
         "$user->ID = '1';",
@@ -693,6 +712,7 @@ describe('Users Check Command', () => {
     });
 
     it('should exit 0 when no high severity issues', async () => {
+      createWordPressInstall(tempDir);
       const content = [
         "$user = new stdClass();",
         "$user->ID = '1';",
@@ -723,6 +743,7 @@ describe('Users Check Command', () => {
     });
 
     it('should exit 0 when no users found', async () => {
+      createWordPressInstall(tempDir);
       const program = createProgram();
       registerUsersCheckCommand(program, createTestCliOptions({ json: true }));
 
