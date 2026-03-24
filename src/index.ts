@@ -29,6 +29,7 @@ import { registerUsersCheckCommand } from './commands/users-check';
 import { registerLicensesCheckCommand } from './commands/licenses-check';
 import { registerCronManageCommand } from './commands/cron-manage';
 import { registerCronCheckCommand } from './commands/cron-check';
+import { registerCronGuardCommand } from './commands/cron-guard';
 import { registerEnvCheckCommand } from './commands/env-check';
 import { registerSslCheckCommand } from './commands/ssl-check';
 
@@ -101,6 +102,7 @@ registerUsersCheckCommand(program, getOpts);
 registerLicensesCheckCommand(program, getOpts);
 registerCronManageCommand(program, getOpts);
 registerCronCheckCommand(program, getOpts);
+registerCronGuardCommand(program, getOpts);
 registerEnvCheckCommand(program, getOpts);
 registerSslCheckCommand(program, getOpts);
 
