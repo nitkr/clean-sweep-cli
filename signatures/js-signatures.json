@@ -4,29 +4,11 @@
   "lastUpdated": "2026-03-23",
   "signatures": [
     {
-      "id": "js-eval-001",
-      "name": "Dynamic eval()",
-      "description": "Uses eval() with string literal for code execution",
-      "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*['\"`]",
-      "type": "malicious-eval",
-      "category": "code-execution"
-    },
-    {
       "id": "js-eval-002",
       "name": "Template Literal eval",
       "description": "Uses eval() with template literal",
       "severity": "critical",
       "pattern": "eval\\s*\\(\\s*`",
-      "type": "malicious-eval",
-      "category": "code-execution"
-    },
-    {
-      "id": "js-eval-003",
-      "name": "Concatenated eval",
-      "description": "Uses eval() with string concatenation",
-      "severity": "critical",
-      "pattern": "eval\\s*\\([^)]*\\+[^)]*\\)",
       "type": "malicious-eval",
       "category": "code-execution"
     },
@@ -103,24 +85,6 @@
       "category": "cross-site-scripting"
     },
     {
-      "id": "js-xss-003",
-      "name": "outerHTML Assignment",
-      "description": "Uses outerHTML with potentially unsafe data",
-      "severity": "medium",
-      "pattern": "\\.outerHTML\\s*=",
-      "type": "xss",
-      "category": "cross-site-scripting"
-    },
-    {
-      "id": "js-xss-004",
-      "name": "insertAdjacentHTML Usage",
-      "description": "Uses insertAdjacentHTML with dynamic content",
-      "severity": "medium",
-      "pattern": "insertAdjacentHTML\\s*\\(",
-      "type": "xss",
-      "category": "cross-site-scripting"
-    },
-    {
       "id": "js-xss-005",
       "name": "eval-based XSS",
       "description": "Uses eval to execute potentially malicious content",
@@ -130,15 +94,6 @@
       "category": "cross-site-scripting"
     },
     {
-      "id": "js-obfuscation-002",
-      "name": "Unescape Usage",
-      "description": "Uses unescape for decoding obfuscated content",
-      "severity": "medium",
-      "pattern": "unescape\\s*\\(",
-      "type": "obfuscation",
-      "category": "obfuscation"
-    },
-    {
       "id": "js-suspicious-001",
       "name": "Remote Script Loading",
       "description": "Loads scripts from external URLs",
@@ -146,15 +101,6 @@
       "pattern": "<script[^>]+src\\s*=\\s*['\"]http",
       "type": "suspicious",
       "category": "remote-code"
-    },
-    {
-      "id": "js-suspicious-005",
-      "name": "LocalStorage Access",
-      "description": "Accesses localStorage for data storage",
-      "severity": "low",
-      "pattern": "localStorage\\.(setItem|getItem)",
-      "type": "suspicious",
-      "category": "data-storage"
     }
   ]
 }
