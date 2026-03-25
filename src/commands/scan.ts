@@ -10,6 +10,9 @@ import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefau
 import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
 import { loadWhitelist, applyWhitelist, WhitelistConfig } from '../whitelist';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
+import { severityColor, colors } from '../formatters/colors';
+import { severityIcon, icons } from '../formatters/icons';
+import { createThreatTable, createVulnerabilityTable } from '../formatters/table';
 
 interface CliOptions {
   dryRun: boolean;
@@ -203,12 +206,11 @@ export function registerScanCommand(
         let unknownFiles: UnknownFilesResult | undefined;
 
         if (checkVulns) {
-          logger.info('Checking for vulnerabilities...');
-          console.log('Checking for vulnerabilities...');
           const vulnResult = await scanVulnerabilities(normalizedPath);
           vulnerabilities = vulnResult.vulnerabilities;
 
           if (!opts.json && !cmdOptions.json) {
+            console.log('Checking for vulnerabilities...');
             if (vulnResult.wordpress) {
               console.log(`  WordPress: ${vulnResult.wordpress}`);
             }
@@ -219,11 +221,10 @@ export function registerScanCommand(
         }
 
         if (checkIntegrity) {
-          logger.info('Checking core file integrity...');
-          console.log('Checking core file integrity...');
           integrity = await checkWordPressIntegrity(normalizedPath);
 
           if (!opts.json && !cmdOptions.json) {
+            console.log('Checking core file integrity...');
             if (integrity.wordpressVersion) {
               console.log(`  WordPress version: ${integrity.wordpressVersion}`);
             }
@@ -239,11 +240,10 @@ export function registerScanCommand(
         }
 
         if (findUnknown) {
-          logger.info('Finding unknown files...');
-          console.log('Finding unknown files...');
           unknownFiles = await findUnknownFiles(normalizedPath);
 
           if (!opts.json && !cmdOptions.json) {
+            console.log('Finding unknown files...');
             console.log(`  Unknown files found: ${unknownFiles.count}`);
             if (unknownFiles.files.length > 0 && unknownFiles.files.length <= 20) {
               console.log('  Unknown files:');
@@ -261,29 +261,46 @@ export function registerScanCommand(
 
         const suggestions = buildSuggestions(result.threats, vulnerabilities, integrity);
 
-        if (!opts.json && !cmdOptions.json && result.threats.length > 0) {
-          console.log(`\nFound ${result.threats.length} potential threat(s):`);
-          for (const threat of result.threats) {
-            const lineInfo = threat.line !== null ? `:${threat.line}` : '';
-            console.log(`  - ${threat.file}${lineInfo} [${threat.type}]`);
-            if (verbose) {
-              console.log(`    Signature: ${threat.signature}`);
+        if (!opts.json && !cmdOptions.json) {
+          if (result.threats.length > 0) {
+            console.log(`\n${icons.error} ${colors.critical('UNSAFE')} – Issues found\n`);
+            
+            const threatTable = createThreatTable();
+            for (const threat of result.threats) {
+              const lineInfo = threat.line !== null ? `:${threat.line}` : '';
+              const sev = (threat as any).severity || 'medium';
+              threatTable.push([
+                threat.file + lineInfo,
+                threat.type,
+                `${severityIcon(sev)} ${severityColor(sev)(sev.toUpperCase())}`
+              ]);
             }
+            console.log(threatTable.toString());
+            
+            if (result.whitelisted > 0) {
+              console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
+            }
+          } else {
+            console.log(`\n${icons.safe} ${colors.info('SAFE')} – No threats found (safe)`);
           }
-          if (result.whitelisted > 0) {
-            console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
-          }
-          console.log(`\nScan result: ${result.safe ? 'SAFE' : 'UNSAFE'}`);
-        } else if (!opts.json && !cmdOptions.json && result.whitelisted > 0) {
-          console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
-          console.log(`\nScan result: ${result.safe ? 'SAFE' : 'UNSAFE'}`);
         }
 
         if (!opts.json && !cmdOptions.json && vulnerabilities.length > 0) {
-          console.log(`\nFound ${vulnerabilities.length} known vulnerability(ies):`);
+          console.log(`\nVULNERABILITIES (${vulnerabilities.length})\n`);
+          
+          const vulnTable = createVulnerabilityTable();
           for (const vuln of vulnerabilities) {
-            console.log(`  - [${vuln.severity}] ${vuln.component} ${vuln.version}: ${vuln.title} (${vuln.cve})`);
+            const sev = vuln.severity || 'medium';
+            vulnTable.push([
+              vuln.component,
+              vuln.version || 'unknown',
+              vuln.title,
+              vuln.cve || 'N/A',
+              `${severityIcon(sev)} ${severityColor(sev)(sev.toUpperCase())}`,
+              (vuln as any).recommendation || 'Update plugin'
+            ]);
           }
+          console.log(vulnTable.toString());
         }
 
         if (!opts.json && !cmdOptions.json && suggestions.length > 0) {
@@ -331,7 +348,9 @@ export function registerScanCommand(
           logger.warn(`Scan completed - found ${result.threats.length} threat(s)`);
         }
 
-        formatOutput(output, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(output, true);
+        }
       } catch (err) {
         const error = { error: 'Scan failed', message: String(err) };
         logger.error('Scan failed with error', { error: String(err) });
