@@ -66,7 +66,27 @@ export function registerCoreRepairCommand(
         process.exit(1);
       }
 
-      const wpResult = detectWordPressRoot(targetPath);
+      let wpResult;
+      if (!cmdOptions.path && opts.path === process.cwd()) {
+        wpResult = detectWordPressRoot(targetPath);
+        if (wpResult.found) {
+          targetPath = wpResult.path;
+        }
+      } else {
+        const stats = fs.statSync(targetPath);
+        if (!stats.isDirectory()) {
+          const error = { success: false, error: 'Path is not a directory', path: targetPath };
+          formatOutput(error, opts.json || cmdOptions.json);
+          process.exit(1);
+        }
+        const wpConfigPath = path.join(targetPath, 'wp-config.php');
+        if (fs.existsSync(wpConfigPath)) {
+          wpResult = { path: targetPath, found: true, searchedPaths: [targetPath] };
+        } else {
+          wpResult = { path: targetPath, found: false, searchedPaths: [targetPath] };
+        }
+      }
+
       if (!wpResult.found) {
         const error = { success: false, error: formatWpPathError(wpResult, 'core:repair'), path: targetPath };
         formatOutput(error, opts.json || cmdOptions.json);

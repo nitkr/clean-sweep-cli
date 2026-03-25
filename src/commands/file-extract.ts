@@ -82,13 +82,19 @@ export function registerFileExtractCommand(
         process.exit(1);
       }
 
-      const wpResult = detectWordPressRoot(wpPath);
-      if (!wpResult.found) {
-        const error = { success: false, error: formatWpPathError(wpResult, 'file:extract'), path: wpPath };
+      if (!cmdOptions.path && opts.path === process.cwd()) {
+        const wpResult = detectWordPressRoot(wpPath);
+        if (!wpResult.found) {
+          const error = { success: false, error: formatWpPathError(wpResult, 'file:extract'), path: wpPath };
+          formatOutput(error, opts.json || cmdOptions.json);
+          process.exit(1);
+        }
+        wpPath = wpResult.path;
+      } else if (!isWordPressInstallation(wpPath)) {
+        const error = { success: false, error: 'WordPress installation not found at specified path', path: wpPath };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
-      wpPath = wpResult.path;
 
       if (!fs.existsSync(zipPath)) {
         const error = { success: false, error: 'ZIP file does not exist', zipPath };

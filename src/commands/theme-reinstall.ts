@@ -76,7 +76,21 @@ export function registerThemeReinstallCommand(
         process.exit(1);
       }
 
-      const wpResult = detectWordPressRoot(targetPath);
+      let wpResult;
+      if (!cmdOptions.path && opts.path === process.cwd()) {
+        wpResult = detectWordPressRoot(targetPath);
+        if (wpResult.found) {
+          targetPath = wpResult.path;
+        }
+      } else {
+        const wpConfigPath = path.join(targetPath, 'wp-config.php');
+        if (fs.existsSync(wpConfigPath)) {
+          wpResult = { path: targetPath, found: true, searchedPaths: [targetPath] };
+        } else {
+          wpResult = { path: targetPath, found: false, searchedPaths: [targetPath] };
+        }
+      }
+
       if (!wpResult.found) {
         const error = { success: false, error: formatWpPathError(wpResult, 'theme:reinstall'), path: targetPath };
         formatOutput(error, opts.json || cmdOptions.json);

@@ -272,27 +272,41 @@ export function registerDbScanCommand(
     .option('--force', 'Actually execute the scan', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
-      let targetPath = path.resolve(cmdOptions.path || opts.path);
+      let targetPath = cmdOptions.path || opts.path;
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
-      
-      if (!fs.existsSync(targetPath)) {
-        const error = { success: false, error: 'Path does not exist', path: targetPath };
+
+      const normalizedPath = path.resolve(targetPath);
+
+      if (!fs.existsSync(normalizedPath)) {
+        const error = { success: false, error: 'Path does not exist', path: normalizedPath };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
       }
 
-      const wpResult = detectWordPressRoot(targetPath);
+      let wpResult;
+      if (!cmdOptions.path && opts.path === process.cwd()) {
+        wpResult = detectWordPressRoot(targetPath);
+        if (wpResult.found) {
+          targetPath = wpResult.path;
+        }
+      } else {
+        const wpConfigPath = path.join(normalizedPath, 'wp-config.php');
+        if (fs.existsSync(wpConfigPath)) {
+          wpResult = { path: normalizedPath, found: true, searchedPaths: [normalizedPath] };
+          targetPath = normalizedPath;
+        } else {
+          wpResult = { path: normalizedPath, found: false, searchedPaths: [normalizedPath] };
+        }
+      }
+
       if (!wpResult.found && !cmdOptions.dbHost) {
         const error = {
           success: false,
           error: formatWpPathError(wpResult, 'db:scan'),
-          path: targetPath,
+          path: normalizedPath,
         };
         formatOutput(error, opts.json || cmdOptions.json);
         process.exit(1);
-      }
-      if (wpResult.found) {
-        targetPath = wpResult.path;
       }
       
       const wpConfigPath = path.join(targetPath, 'wp-config.php');

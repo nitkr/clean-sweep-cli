@@ -140,7 +140,7 @@ export function registerScanCommand(
       let targetPath = cmdOptions.path || opts.path;
       const verbose = opts.verbose || cmdOptions.verbose;
 
-      if (!cmdOptions.path) {
+      if (!cmdOptions.path && opts.path === process.cwd()) {
         const wpResult = detectWordPressRoot(targetPath);
         if (wpResult.found) {
           targetPath = wpResult.path;
