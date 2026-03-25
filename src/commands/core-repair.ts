@@ -87,11 +87,45 @@ export function registerCoreRepairCommand(
 
       const version = cmdOptions.version;
       const createBackupFlag = cmdOptions.backup !== false;
-      
-      const downloadUrl = version 
+
+      const standardCoreFiles = [
+        'wp-admin', 'wp-includes', 'index.php', 'wp-login.php', 'wp-blog-header.php',
+        'wp-comments-post.php', 'wp-cron.php', 'wp-links-opml.php', 'wp-load.php',
+        'wp-mail.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php',
+        'xmlrpc.php', 'wp-activate.php', 'wp-config-sample.php', 'readme.html',
+        'license.txt', '.wp-cron.php', 'error_log',
+      ];
+
+      if (dryRun) {
+        const result: CoreRepairResult = {
+          success: true,
+          filesReplaced: standardCoreFiles,
+          filesPreserved: preserveList,
+          backupPath: null,
+          dryRun: true,
+        };
+
+        if (!opts.json && !cmdOptions.json) {
+          console.log('\n[DRY RUN] Would replace core files (standard WordPress core file list):');
+          for (const file of standardCoreFiles) {
+            console.log(`  - ${file}`);
+          }
+          console.log(`\n[DRY RUN] Would preserve ${preserveList.length} file(s)/dir(s):`);
+          for (const file of preserveList) {
+            console.log(`  - ${file}`);
+          }
+        }
+
+        if (opts.json || cmdOptions.json) {
+          formatOutput(result, opts.json || cmdOptions.json);
+        }
+        return;
+      }
+
+      const downloadUrl = version
         ? `https://wordpress.org/wordpress-${version}.tar.gz`
         : 'https://wordpress.org/latest.tar.gz';
-      
+
       logger.info(`Downloading WordPress${version ? ` ${version}` : ' latest'} from wordpress.org`);
 
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-core-'));
@@ -116,8 +150,6 @@ export function registerCoreRepairCommand(
         }
 
         const newFiles = fs.readdirSync(wordpressDir);
-        const existingFiles = fs.existsSync(targetPath) ? fs.readdirSync(targetPath) : [];
-
         const filesToReplace: string[] = [];
         const filesToPreserve: string[] = [...preserveList];
 
@@ -136,45 +168,32 @@ export function registerCoreRepairCommand(
           dryRun,
         };
 
-        if (dryRun) {
-          if (!opts.json && !cmdOptions.json) {
-            console.log(`\n[DRY RUN] Would replace ${filesToReplace.length} core file(s):`);
-            for (const file of filesToReplace) {
-              console.log(`  - ${file}`);
-            }
-            console.log(`\n[DRY RUN] Would preserve ${filesToPreserve.length} file(s)/dir(s):`);
-            for (const file of filesToPreserve) {
-              console.log(`  - ${file}`);
-            }
+        if (!opts.json && !cmdOptions.json) {
+          if (createBackupFlag) {
+            const backupResult = createBackup(targetPath);
+            result.backupPath = backupResult.backupPath;
+            console.log(`Backup created at: ${backupResult.backupPath}`);
+          } else {
+            console.log(`Skipping backup (--backup=false)`);
           }
-        } else {
-          if (!opts.json && !cmdOptions.json) {
-            if (createBackupFlag) {
-              const backupResult = createBackup(targetPath);
-              result.backupPath = backupResult.backupPath;
-              console.log(`Backup created at: ${backupResult.backupPath}`);
-            } else {
-              console.log(`Skipping backup (--backup=false)`);
-            }
 
-            for (const file of filesToReplace) {
-              const srcPath = path.join(wordpressDir, file);
-              const destPath = path.join(targetPath, file);
+          for (const file of filesToReplace) {
+            const srcPath = path.join(wordpressDir, file);
+            const destPath = path.join(targetPath, file);
 
-              if (fs.existsSync(srcPath)) {
-                const stat = fs.statSync(srcPath);
-                if (stat.isDirectory()) {
-                  if (fs.existsSync(destPath)) {
-                    fs.rmSync(destPath, { recursive: true });
-                  }
-                  copyDirRecursive(srcPath, destPath);
-                } else {
-                  fs.copyFileSync(srcPath, destPath);
+            if (fs.existsSync(srcPath)) {
+              const stat = fs.statSync(srcPath);
+              if (stat.isDirectory()) {
+                if (fs.existsSync(destPath)) {
+                  fs.rmSync(destPath, { recursive: true });
                 }
+                copyDirRecursive(srcPath, destPath);
+              } else {
+                fs.copyFileSync(srcPath, destPath);
               }
             }
-            console.log(`Replaced ${filesToReplace.length} core file(s)`);
           }
+          console.log(`Replaced ${filesToReplace.length} core file(s)`);
         }
 
         if (opts.json || cmdOptions.json) {

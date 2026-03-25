@@ -31,6 +31,24 @@
       "category": "remote-code-execution"
     },
     {
+      "id": "php-webshell-003b",
+      "name": "POST-based Command Execution",
+      "description": "Executes commands from POST parameters",
+      "severity": "critical",
+      "pattern": "shell_exec\\s*\\(\\s*\\$_POST",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
+      "id": "php-webshell-003c",
+      "name": "REQUEST-based Command Execution",
+      "description": "Executes commands from REQUEST parameters",
+      "severity": "critical",
+      "pattern": "shell_exec\\s*\\(\\s*\\$_REQUEST",
+      "type": "webshell",
+      "category": "remote-code-execution"
+    },
+    {
       "id": "php-webshell-004",
       "name": "Hidden Input Webshell",
       "description": "Uses hidden form inputs for command injection",
