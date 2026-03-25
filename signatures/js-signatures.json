@@ -76,15 +76,6 @@
       "category": "code-execution"
     },
     {
-      "id": "js-xss-001",
-      "name": "document.write Usage",
-      "description": "Uses document.write for dynamic content",
-      "severity": "medium",
-      "pattern": "document\\.write\\s*\\(",
-      "type": "xss",
-      "category": "cross-site-scripting"
-    },
-    {
       "id": "js-xss-005",
       "name": "eval-based XSS",
       "description": "Uses eval to execute potentially malicious content",
@@ -92,15 +83,6 @@
       "pattern": "eval\\s*\\(\\s*(location|document|window)",
       "type": "xss",
       "category": "cross-site-scripting"
-    },
-    {
-      "id": "js-suspicious-001",
-      "name": "Remote Script Loading",
-      "description": "Loads scripts from external URLs",
-      "severity": "high",
-      "pattern": "<script[^>]+src\\s*=\\s*['\"]http",
-      "type": "suspicious",
-      "category": "remote-code"
     }
   ]
 }

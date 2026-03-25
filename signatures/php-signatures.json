@@ -78,19 +78,19 @@
     },
     {
       "id": "php-backdoor-003",
-      "name": "preg_replace /e Callback",
-      "description": "Uses preg_replace with /e modifier for code execution",
+      "name": "preg_replace /e Callback with Obfuscation",
+      "description": "Uses preg_replace with /e modifier combined with encoding functions for code execution",
       "severity": "critical",
-      "pattern": "preg_replace\\s*\\([^)]*\\/e",
+      "pattern": "preg_replace\\s*\\([^)]*\\/e[^)]*(?:base64_decode|gzinflate|gzuncompress|eval)",
       "type": "backdoor",
       "category": "remote-code-execution"
     },
     {
       "id": "php-backdoor-004",
-      "name": "assert() Dynamic Execution",
-      "description": "Uses assert() to evaluate dynamic strings",
+      "name": "assert() with Obfuscation",
+      "description": "Uses assert() combined with encoding functions for dynamic code execution",
       "severity": "critical",
-      "pattern": "assert\\s*\\(\\s*\\$",
+      "pattern": "assert\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress)\\s*\\(",
       "type": "backdoor",
       "category": "remote-code-execution"
     },
@@ -144,15 +144,6 @@
       "category": "network-access"
     },
     {
-      "id": "php-suspicious-005",
-      "name": "FPM/FastCGI Execution",
-      "description": "Uses fastcgi_finish_request",
-      "severity": "medium",
-      "pattern": "fastcgi_finish_request\\s*\\(",
-      "type": "suspicious-function",
-      "category": "system-command"
-    },
-    {
       "id": "php-suspicious-006",
       "name": "Multiple Encoding Layers with eval",
       "description": "Multiple encoding functions chained with eval execution",
@@ -168,15 +159,6 @@
       "severity": "high",
       "pattern": "\\$[a-zA-Z_]\\w*\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13|eval)\\s*\\(",
       "type": "dynamic-function",
-      "category": "remote-code-execution"
-    },
-    {
-      "id": "php-suspicious-008",
-      "name": "Reflection Execution",
-      "description": "Uses reflection for dynamic code execution",
-      "severity": "high",
-      "pattern": "ReflectionMethod.*invoke",
-      "type": "suspicious-function",
       "category": "remote-code-execution"
     },
     {
