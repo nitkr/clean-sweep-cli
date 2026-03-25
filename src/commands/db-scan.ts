@@ -330,16 +330,20 @@ export function registerDbScanCommand(
               }
             }
           }
+        } else {
+          formatOutput(result, opts.json || cmdOptions.json);
         }
-        
-        formatOutput(result, opts.json || cmdOptions.json);
       } catch (err) {
         const error = { 
           success: false, 
           error: String(err),
           dryRun,
         };
-        formatOutput(error, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(error, opts.json || cmdOptions.json);
+        } else {
+          console.error(`\nError: ${error.error}`);
+        }
         process.exit(1);
       }
     });

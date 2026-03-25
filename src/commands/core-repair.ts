@@ -137,43 +137,49 @@ export function registerCoreRepairCommand(
         };
 
         if (dryRun) {
-          console.log(`\n[DRY RUN] Would replace ${filesToReplace.length} core file(s):`);
-          for (const file of filesToReplace) {
-            console.log(`  - ${file}`);
-          }
-          console.log(`\n[DRY RUN] Would preserve ${filesToPreserve.length} file(s)/dir(s):`);
-          for (const file of filesToPreserve) {
-            console.log(`  - ${file}`);
-          }
-        } else {
-          if (createBackupFlag) {
-            const backupResult = createBackup(targetPath);
-            result.backupPath = backupResult.backupPath;
-            console.log(`Backup created at: ${backupResult.backupPath}`);
-          } else {
-            console.log(`Skipping backup (--backup=false)`);
-          }
-
-          for (const file of filesToReplace) {
-            const srcPath = path.join(wordpressDir, file);
-            const destPath = path.join(targetPath, file);
-
-            if (fs.existsSync(srcPath)) {
-              const stat = fs.statSync(srcPath);
-              if (stat.isDirectory()) {
-                if (fs.existsSync(destPath)) {
-                  fs.rmSync(destPath, { recursive: true });
-                }
-                copyDirRecursive(srcPath, destPath);
-              } else {
-                fs.copyFileSync(srcPath, destPath);
-              }
+          if (!opts.json && !cmdOptions.json) {
+            console.log(`\n[DRY RUN] Would replace ${filesToReplace.length} core file(s):`);
+            for (const file of filesToReplace) {
+              console.log(`  - ${file}`);
+            }
+            console.log(`\n[DRY RUN] Would preserve ${filesToPreserve.length} file(s)/dir(s):`);
+            for (const file of filesToPreserve) {
+              console.log(`  - ${file}`);
             }
           }
-          console.log(`Replaced ${filesToReplace.length} core file(s)`);
+        } else {
+          if (!opts.json && !cmdOptions.json) {
+            if (createBackupFlag) {
+              const backupResult = createBackup(targetPath);
+              result.backupPath = backupResult.backupPath;
+              console.log(`Backup created at: ${backupResult.backupPath}`);
+            } else {
+              console.log(`Skipping backup (--backup=false)`);
+            }
+
+            for (const file of filesToReplace) {
+              const srcPath = path.join(wordpressDir, file);
+              const destPath = path.join(targetPath, file);
+
+              if (fs.existsSync(srcPath)) {
+                const stat = fs.statSync(srcPath);
+                if (stat.isDirectory()) {
+                  if (fs.existsSync(destPath)) {
+                    fs.rmSync(destPath, { recursive: true });
+                  }
+                  copyDirRecursive(srcPath, destPath);
+                } else {
+                  fs.copyFileSync(srcPath, destPath);
+                }
+              }
+            }
+            console.log(`Replaced ${filesToReplace.length} core file(s)`);
+          }
         }
 
-        formatOutput(result, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(result, opts.json || cmdOptions.json);
+        }
       } catch (err) {
         const error = {
           success: false,

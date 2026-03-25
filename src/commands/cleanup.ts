@@ -86,8 +86,9 @@ export function registerCleanupCommand(
       if (filesToRemove.length === 0) {
         if (!opts.json && !cmdOptions.json) {
           console.log('No Clean Sweep toolkit files found to remove.');
+        } else {
+          formatOutput(result, opts.json || cmdOptions.json);
         }
-        formatOutput(result, opts.json || cmdOptions.json);
         return;
       }
 
@@ -103,7 +104,9 @@ export function registerCleanupCommand(
           console.log(`(Dry run) Would remove ${filesToRemove.length} item(s).`);
         }
         result.removedFiles = filesToRemove;
-        formatOutput(result, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(result, opts.json || cmdOptions.json);
+        }
         return;
       }
 
@@ -123,8 +126,8 @@ export function registerCleanupCommand(
 
       if (!opts.json && !cmdOptions.json) {
         console.log(`Removed ${result.removedFiles.length} item(s).`);
+      } else {
+        formatOutput(result, opts.json || cmdOptions.json);
       }
-
-      formatOutput(result, opts.json || cmdOptions.json);
     });
 }

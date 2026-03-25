@@ -133,34 +133,40 @@ export function registerThemeReinstallCommand(
         };
 
         if (dryRun) {
-          console.log(`\n[DRY RUN] Would reinstall theme: ${themeSlug}`);
-          if (themeExists) {
-            console.log(`[DRY RUN] Would backup existing theme at: ${themeDir}`);
-            console.log(`[DRY RUN] Would remove old theme files`);
-          }
-          console.log(`[DRY RUN] Would extract new version from: ${downloadUrl}`);
-          console.log(`[DRY RUN] Would place theme at: ${themeDir}`);
-        } else {
-          if (themeExists) {
-            if (createBackupFlag) {
-              const backupResult = createThemeBackup(themesPath, themeSlug);
-              if (backupResult) {
-                result.backupPath = backupResult.backupPath;
-                console.log(`Backup created at: ${backupResult.backupPath}`);
-              }
-            } else {
-              console.log(`Skipping backup (--backup=false)`);
+          if (!opts.json && !cmdOptions.json) {
+            console.log(`\n[DRY RUN] Would reinstall theme: ${themeSlug}`);
+            if (themeExists) {
+              console.log(`[DRY RUN] Would backup existing theme at: ${themeDir}`);
+              console.log(`[DRY RUN] Would remove old theme files`);
             }
-            
-            fs.rmSync(themeDir, { recursive: true, force: true });
-            console.log(`Removed old theme files`);
+            console.log(`[DRY RUN] Would extract new version from: ${downloadUrl}`);
+            console.log(`[DRY RUN] Would place theme at: ${themeDir}`);
           }
+        } else {
+          if (!opts.json && !cmdOptions.json) {
+            if (themeExists) {
+              if (createBackupFlag) {
+                const backupResult = createThemeBackup(themesPath, themeSlug);
+                if (backupResult) {
+                  result.backupPath = backupResult.backupPath;
+                  console.log(`Backup created at: ${backupResult.backupPath}`);
+                }
+              } else {
+                console.log(`Skipping backup (--backup=false)`);
+              }
+              
+              fs.rmSync(themeDir, { recursive: true, force: true });
+              console.log(`Removed old theme files`);
+            }
 
-          copyDirRecursive(extractedThemeDir, themeDir);
-          console.log(`Installed theme: ${themeSlug}`);
+            copyDirRecursive(extractedThemeDir, themeDir);
+            console.log(`Installed theme: ${themeSlug}`);
+          }
         }
 
-        formatOutput(result, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(result, opts.json || cmdOptions.json);
+        }
       } catch (err) {
         const error = {
           success: false,

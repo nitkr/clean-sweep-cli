@@ -133,34 +133,40 @@ export function registerPluginReinstallCommand(
         };
 
         if (dryRun) {
-          console.log(`\n[DRY RUN] Would reinstall plugin: ${pluginSlug}`);
-          if (pluginExists) {
-            console.log(`[DRY RUN] Would backup existing plugin at: ${pluginDir}`);
-            console.log(`[DRY RUN] Would remove old plugin files`);
-          }
-          console.log(`[DRY RUN] Would extract new version from: ${downloadUrl}`);
-          console.log(`[DRY RUN] Would place plugin at: ${pluginDir}`);
-        } else {
-          if (pluginExists) {
-            if (createBackupFlag) {
-              const backupResult = createPluginBackup(pluginsPath, pluginSlug);
-              if (backupResult) {
-                result.backupPath = backupResult.backupPath;
-                console.log(`Backup created at: ${backupResult.backupPath}`);
-              }
-            } else {
-              console.log(`Skipping backup (--backup=false)`);
+          if (!opts.json && !cmdOptions.json) {
+            console.log(`\n[DRY RUN] Would reinstall plugin: ${pluginSlug}`);
+            if (pluginExists) {
+              console.log(`[DRY RUN] Would backup existing plugin at: ${pluginDir}`);
+              console.log(`[DRY RUN] Would remove old plugin files`);
             }
-            
-            fs.rmSync(pluginDir, { recursive: true, force: true });
-            console.log(`Removed old plugin files`);
+            console.log(`[DRY RUN] Would extract new version from: ${downloadUrl}`);
+            console.log(`[DRY RUN] Would place plugin at: ${pluginDir}`);
           }
+        } else {
+          if (!opts.json && !cmdOptions.json) {
+            if (pluginExists) {
+              if (createBackupFlag) {
+                const backupResult = createPluginBackup(pluginsPath, pluginSlug);
+                if (backupResult) {
+                  result.backupPath = backupResult.backupPath;
+                  console.log(`Backup created at: ${backupResult.backupPath}`);
+                }
+              } else {
+                console.log(`Skipping backup (--backup=false)`);
+              }
+              
+              fs.rmSync(pluginDir, { recursive: true, force: true });
+              console.log(`Removed old plugin files`);
+            }
 
-          copyDirRecursive(extractedPluginDir, pluginDir);
-          console.log(`Installed plugin: ${pluginSlug}`);
+            copyDirRecursive(extractedPluginDir, pluginDir);
+            console.log(`Installed plugin: ${pluginSlug}`);
+          }
         }
 
-        formatOutput(result, opts.json || cmdOptions.json);
+        if (opts.json || cmdOptions.json) {
+          formatOutput(result, opts.json || cmdOptions.json);
+        }
       } catch (err) {
         const error = {
           success: false,

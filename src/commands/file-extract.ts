@@ -112,33 +112,6 @@ export function registerFileExtractCommand(
           const tempExtractedFiles = getAllFiles(tempExtractDir);
           extractedFiles = tempExtractedFiles.map(f => path.relative(tempExtractDir, f));
 
-          if (dryRun) {
-            console.log(`\n[DRY RUN] Would extract ZIP: ${zipPath}`);
-            console.log(`[DRY RUN] Target directory: ${targetPath}`);
-            console.log(`[DRY RUN] Would extract ${extractedFiles.length} file(s):`);
-            for (const file of extractedFiles.slice(0, 10)) {
-              console.log(`  - ${file}`);
-            }
-            if (extractedFiles.length > 10) {
-              console.log(`  ... and ${extractedFiles.length - 10} more`);
-            }
-            if (targetExists) {
-              console.log(`[DRY RUN] Target exists - would create backup before extraction`);
-            }
-          } else {
-            if (targetExists) {
-              const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-              backupPath = path.join(path.dirname(targetPath), 'backups', `extract-${path.basename(targetDir)}-${timestamp}`);
-              fs.mkdirSync(backupPath, { recursive: true });
-              copyDirRecursive(targetPath, backupPath);
-              console.log(`Backup created at: ${backupPath}`);
-            }
-
-            fs.mkdirSync(targetPath, { recursive: true });
-            copyDirRecursive(tempExtractDir, targetPath);
-            console.log(`Extracted ${extractedFiles.length} file(s) to: ${targetPath}`);
-          }
-
           const result = {
             success: true,
             zipPath: path.resolve(zipPath),
@@ -148,7 +121,40 @@ export function registerFileExtractCommand(
             dryRun,
           };
 
-          formatOutput(result, opts.json || cmdOptions.json);
+          if (dryRun) {
+            if (!opts.json && !cmdOptions.json) {
+              console.log(`\n[DRY RUN] Would extract ZIP: ${zipPath}`);
+              console.log(`[DRY RUN] Target directory: ${targetPath}`);
+              console.log(`[DRY RUN] Would extract ${extractedFiles.length} file(s):`);
+              for (const file of extractedFiles.slice(0, 10)) {
+                console.log(`  - ${file}`);
+              }
+              if (extractedFiles.length > 10) {
+                console.log(`  ... and ${extractedFiles.length - 10} more`);
+              }
+              if (targetExists) {
+                console.log(`[DRY RUN] Target exists - would create backup before extraction`);
+              }
+            }
+          } else {
+            if (!opts.json && !cmdOptions.json) {
+              if (targetExists) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                backupPath = path.join(path.dirname(targetPath), 'backups', `extract-${path.basename(targetDir)}-${timestamp}`);
+                fs.mkdirSync(backupPath, { recursive: true });
+                copyDirRecursive(targetPath, backupPath);
+                console.log(`Backup created at: ${backupPath}`);
+              }
+
+              fs.mkdirSync(targetPath, { recursive: true });
+              copyDirRecursive(tempExtractDir, targetPath);
+              console.log(`Extracted ${extractedFiles.length} file(s) to: ${targetPath}`);
+            }
+          }
+
+          if (opts.json || cmdOptions.json) {
+            formatOutput(result, opts.json || cmdOptions.json);
+          }
         } finally {
           fs.rmSync(tempExtractDir, { recursive: true, force: true });
         }

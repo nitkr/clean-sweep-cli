@@ -333,9 +333,9 @@ export function registerDbOptimizeCommand(
             console.log(`\nOptimization script saved to: ${result.scriptPath}`);
             console.log('Review and run the script manually to apply changes.');
           }
+        } else {
+          formatOutput(result, opts.json || cmdOptions.json);
         }
-
-        formatOutput(result, opts.json || cmdOptions.json);
       } catch (err) {
         const error = {
           success: false,
