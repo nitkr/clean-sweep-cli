@@ -52,13 +52,12 @@ export function registerCleanupCommand(
 
       const filesToRemove: string[] = [];
 
-      const parentDir = path.dirname(targetPath);
-      const backupsPath = path.join(parentDir, 'backups');
-      if (fs.existsSync(backupsPath)) {
-        const entries = fs.readdirSync(backupsPath);
-        for (const entry of entries) {
-          const fullPath = path.join(backupsPath, entry);
-          filesToRemove.push(fullPath);
+      // Only remove Clean Sweep's own folder, not arbitrary 'backups' folders
+      const cleanSweepPath = path.join(targetPath, 'clean-sweep-cli');
+      if (fs.existsSync(cleanSweepPath)) {
+        const stat = fs.statSync(cleanSweepPath);
+        if (stat.isDirectory()) {
+          filesToRemove.push(cleanSweepPath);
         }
       }
 

@@ -252,6 +252,7 @@ export function applyConfigFix(action: FixAction): boolean {
 
 export function applyHtaccessFix(action: FixAction): boolean {
   try {
+    // Special case for uploads .htaccess - different block content
     if (action.file.endsWith('uploads/.htaccess')) {
       const dir = path.dirname(action.file);
       if (!fs.existsSync(dir)) {
@@ -274,12 +275,15 @@ export function applyHtaccessFix(action: FixAction): boolean {
 
       if (beginIdx !== -1 && endIdx !== -1) {
         const before = existingContent.substring(0, beginIdx);
-        const after = existingContent.substring(endIdx + endMarker.length);
-        existingContent = before + after;
+        // Include the newline after end marker if present
+        const endMarkerEnd = endIdx + endMarker.length;
+        const after = existingContent.substring(endMarkerEnd);
+        // Normalize: remove trailing newlines from before, leading newlines from after
+        existingContent = before.replace(/\n+$/, '') + '\n' + after.replace(/^\n+/, '');
       }
     }
 
-    const finalContent = HTACCESS_SECURITY_BLOCK + '\n' + existingContent;
+    const finalContent = existingContent.replace(/\n+$/, '') + '\n' + HTACCESS_SECURITY_BLOCK + '\n';
     fs.writeFileSync(htaccessPath, finalContent, 'utf-8');
     return true;
   } catch {

@@ -85,8 +85,24 @@ function restoreFiles(
   const errors: string[] = [];
 
   for (const relativeFile of quarantineFolder.files) {
+    // Validate path doesn't contain traversal sequences
+    const normalizedRelative = path.normalize(relativeFile);
+    if (normalizedRelative.startsWith('..') || path.isAbsolute(normalizedRelative)) {
+      errors.push(`Invalid path traversal in ${relativeFile}: rejected`);
+      continue;
+    }
+
     const srcFile = path.join(quarantineFolder.path, relativeFile);
     const destFile = path.join(targetPath, relativeFile);
+    
+    // Ensure destFile is still within targetPath (prevent path traversal)
+    const resolvedDest = path.resolve(destFile);
+    const resolvedTarget = path.resolve(targetPath);
+    if (!resolvedDest.startsWith(resolvedTarget + path.sep) && resolvedDest !== resolvedTarget) {
+      errors.push(`Path traversal detected for ${relativeFile}: rejected`);
+      continue;
+    }
+
     const destDir = path.dirname(destFile);
 
     try {
