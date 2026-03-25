@@ -151,6 +151,10 @@ export function registerScanCommand(
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
 
       const logger = createLogger(logLevel);
+      const useJson = opts.json || cmdOptions.json;
+      if (useJson) {
+        logger.setSilent(true);
+      }
       logger.info(`Starting scan of directory: ${targetPath}`, { logLevel });
 
       const normalizedPath = path.resolve(targetPath);

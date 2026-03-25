@@ -4,24 +4,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import AdmZip from 'adm-zip';
-import winston from 'winston';
+import { createLogger } from '../logger';
 import { createThemeBackup } from '../backup';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ level, message }) => {
-          return `[${level}] ${message}`;
-        })
-      ),
-    }),
-  ],
-});
 
 interface CliOptions {
   dryRun: boolean;
@@ -72,6 +57,12 @@ export function registerThemeReinstallCommand(
       const themeSlug = cmdOptions.theme;
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const createBackupFlag = cmdOptions.backup !== false;
+      const useJson = opts.json || cmdOptions.json;
+
+      const logger = createLogger('info');
+      if (useJson) {
+        logger.setSilent(true);
+      }
 
       if (!themeSlug) {
         const error = { success: false, error: 'Theme slug is required. Use --theme <slug>' };

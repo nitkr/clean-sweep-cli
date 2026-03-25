@@ -4,24 +4,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import AdmZip from 'adm-zip';
-import winston from 'winston';
+import { createLogger } from '../logger';
 import { createPluginBackup } from '../backup';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ level, message }) => {
-          return `[${level}] ${message}`;
-        })
-      ),
-    }),
-  ],
-});
 
 interface CliOptions {
   dryRun: boolean;
@@ -72,6 +57,12 @@ export function registerPluginReinstallCommand(
       const pluginSlug = cmdOptions.plugin;
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const createBackupFlag = cmdOptions.backup !== false;
+      const useJson = opts.json || cmdOptions.json;
+
+      const logger = createLogger('info');
+      if (useJson) {
+        logger.setSilent(true);
+      }
 
       if (!pluginSlug) {
         const error = { success: false, error: 'Plugin slug is required. Use --plugin <slug>' };

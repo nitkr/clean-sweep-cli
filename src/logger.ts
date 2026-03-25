@@ -29,10 +29,12 @@ export interface Logger {
   warn(message: string, meta?: Record<string, unknown>): void;
   error(message: string, meta?: Record<string, unknown>): void;
   setLevel(level: LogLevel): void;
+  setSilent(silent: boolean): void;
 }
 
 let loggerInstance: winston.Logger | null = null;
 let currentLevel: LogLevel = 'info';
+let consoleTransport: winston.transport | null = null;
 
 function getTimestamp(): string {
   return new Date().toISOString();
@@ -48,6 +50,15 @@ export function createLogger(level: LogLevel = 'info'): Logger {
   currentLevel = level;
   ensureLogDir();
 
+  consoleTransport = new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.printf(({ level, message, timestamp }) => {
+        return `[${timestamp}] [${level}] ${message}`;
+      })
+    ),
+  });
+
   loggerInstance = winston.createLogger({
     level,
     format: winston.format.combine(
@@ -55,14 +66,7 @@ export function createLogger(level: LogLevel = 'info'): Logger {
       winston.format.json()
     ),
     transports: [
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.printf(({ level, message, timestamp }) => {
-            return `[${timestamp}] [${level}] ${message}`;
-          })
-        ),
-      }),
+      consoleTransport,
       createFileTransport(),
     ],
   });
@@ -84,6 +88,11 @@ export function createLogger(level: LogLevel = 'info'): Logger {
       currentLevel = level;
       if (loggerInstance) {
         loggerInstance.level = level;
+      }
+    },
+    setSilent(silent: boolean): void {
+      if (consoleTransport) {
+        consoleTransport.silent = silent;
       }
     },
   };
@@ -110,6 +119,11 @@ export function getLogger(): Logger {
     setLevel(level: LogLevel): void {
       currentLevel = level;
       instance.level = level;
+    },
+    setSilent(silent: boolean): void {
+      if (consoleTransport) {
+        consoleTransport.silent = silent;
+      }
     },
   };
 }

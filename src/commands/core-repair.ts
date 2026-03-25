@@ -4,24 +4,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import fetch from 'node-fetch';
 import * as tar from 'tar';
-import winston from 'winston';
+import { createLogger, getLogger, LogLevel } from '../logger';
 import { createBackup, CoreRepairResult } from '../backup';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf(({ level, message }) => {
-          return `[${level}] ${message}`;
-        })
-      ),
-    }),
-  ],
-});
 
 interface CliOptions {
   dryRun: boolean;
@@ -68,6 +53,12 @@ export function registerCoreRepairCommand(
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
+      const useJson = opts.json || cmdOptions.json;
+
+      const logger = createLogger('info');
+      if (useJson) {
+        logger.setSilent(true);
+      }
 
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
