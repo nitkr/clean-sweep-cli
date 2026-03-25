@@ -143,7 +143,8 @@ async function scanDbTable(
   credentials: DbCredentials,
   table: string,
   column: string,
-  dryRun: boolean
+  dryRun: boolean,
+  useJson: boolean
 ): Promise<DbThreat[]> {
   const threats: DbThreat[] = [];
   
@@ -152,7 +153,9 @@ async function scanDbTable(
     const query = `SELECT ID, ${column} FROM ${table} WHERE ${column} LIKE '%${escapedPattern}%' LIMIT 100`;
     
     if (dryRun) {
-      console.log(`[DRY RUN] Would execute: ${query}`);
+      if (!useJson) {
+        console.log(`[DRY RUN] Would execute: ${query}`);
+      }
       continue;
     }
     
@@ -179,7 +182,7 @@ async function scanDbTable(
 
 async function scanDatabase(
   targetPath: string,
-  options: { dryRun: boolean; dbHost?: string; dbName?: string; dbUser?: string; dbPass?: string }
+  options: { dryRun: boolean; dbHost?: string; dbName?: string; dbUser?: string; dbPass?: string; useJson?: boolean }
 ): Promise<DbScanResult> {
   const wpConfigPath = path.join(targetPath, 'wp-config.php');
   const credentials = parseWpConfig(wpConfigPath);
@@ -220,18 +223,20 @@ async function scanDatabase(
     scannedTables.push(table.name);
     
     if (options.dryRun) {
-      console.log(`\n[DRY RUN] Would scan table: ${table.name}`);
-      for (const pattern of DB_SUSPICIOUS_PATTERNS.slice(0, 3)) {
-        console.log(`[DRY RUN]   Pattern: ${pattern.type}`);
+      if (!options.useJson) {
+        console.log(`\n[DRY RUN] Would scan table: ${table.name}`);
+        for (const pattern of DB_SUSPICIOUS_PATTERNS.slice(0, 3)) {
+          console.log(`[DRY RUN]   Pattern: ${pattern.type}`);
+        }
+        console.log(`[DRY RUN]   Query example: SELECT ID, ${table.column} FROM ${table.name} WHERE ${table.column} LIKE '%pattern%'`);
       }
-      console.log(`[DRY RUN]   Query example: SELECT ID, ${table.column} FROM ${table.name} WHERE ${table.column} LIKE '%pattern%'`);
     } else {
-      const threats = await scanDbTable(dbCredentials, table.name, table.column, false);
+      const threats = await scanDbTable(dbCredentials, table.name, table.column, false, options.useJson ?? false);
       allThreats.push(...threats);
     }
   }
   
-  if (options.dryRun) {
+  if (options.dryRun && !options.useJson) {
     console.log(`\n[DRY RUN] MySQL client check:`);
     exec('which mysql', (error) => {
       if (error) {
@@ -308,6 +313,7 @@ export function registerDbScanCommand(
           dbName: cmdOptions.dbName,
           dbUser: cmdOptions.dbUser,
           dbPass: cmdOptions.dbPass,
+          useJson: opts.json || cmdOptions.json,
         });
         
         if (!opts.json && !cmdOptions.json) {
