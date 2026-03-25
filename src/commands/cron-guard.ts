@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -53,6 +54,17 @@ export interface FrequencyAnalysis {
   intervalMinutes: number | null;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NORMAL';
   description: string;
+}
+
+export interface CronPurgeResult {
+  success: boolean;
+  totalHooks: number;
+  hooksDeleted: number;
+  hooksPreserved: number;
+  deletedHooks: string[];
+  preservedHooks: string[];
+  backupCreated: boolean;
+  message: string;
 }
 
 export interface CronGuardResult {
@@ -712,6 +724,323 @@ export function detectOrphanedCronJobs(
   };
 }
 
+// ============================================================================
+// Cron Purge Functions (One-Click Purge All)
+// ============================================================================
+
+/**
+ * Extract hook entries from serialized PHP cron array
+ * Returns Map of hookName -> serialized entry
+ */
+function extractCronEntries(cronValue: string): Map<string, string> {
+  const entries = new Map<string, string>();
+  
+  // Pattern to match a hook name followed by its array value
+  // s:LEN:"hook_name";a:N:{...}
+  // We need to match the full entry including nested braces
+  const entryPattern = /s:(\d+):"([^"]+)";a:(\d+):\{/g;
+  
+  let match;
+  while ((match = entryPattern.exec(cronValue)) !== null) {
+    const [, keyLen, hookName, arrLen] = match;
+    const keyLength = parseInt(keyLen, 10);
+    
+    // Validate length
+    if (keyLength !== hookName.length) {
+      continue;
+    }
+    
+    // Find the matching closing braces for this entry
+    const startPos = match.index;
+    const openingBraces = 1; // We already matched one opening brace
+    let endPos = match.index + match[0].length;
+    let braceCount = openingBraces;
+    
+    while (braceCount > 0 && endPos < cronValue.length) {
+      if (cronValue[endPos] === '{') braceCount++;
+      else if (cronValue[endPos] === '}') braceCount--;
+      endPos++;
+    }
+    
+    const fullEntry = cronValue.substring(startPos, endPos);
+    entries.set(hookName, fullEntry);
+  }
+  
+  return entries;
+}
+
+/**
+ * Rebuild serialized PHP array from hook entries
+ */
+function rebuildCronArray(entries: Map<string, string>): string {
+  const hooks = Array.from(entries.keys());
+  let result = `a:${hooks.length}:{`;
+  
+  for (const hook of hooks) {
+    result += entries.get(hook) || '';
+  }
+  
+  result += '}';
+  return result;
+}
+
+/**
+ * Run MySQL query and return output
+ */
+async function runMysqlQuery(
+  host: string,
+  user: string,
+  pass: string,
+  dbName: string,
+  query: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const cmd = `mysql -h "${host}" -u "${user}"${pass ? ` -p"${pass}"` : ''} "${dbName}" -e "${query.replace(/"/g, '\\"')}" -B 2>/dev/null`;
+    
+    exec(cmd, { timeout: 30000 }, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve(stdout);
+      }
+    });
+  });
+}
+
+/**
+ * Parse WordPress wp-config.php to get database credentials
+ */
+function parseWpConfigForCron(targetPath: string): { host: string; user: string; pass: string; name: string; prefix: string } | null {
+  const wpConfigPath = path.join(targetPath, 'wp-config.php');
+  
+  if (!fs.existsSync(wpConfigPath)) {
+    return null;
+  }
+  
+  const content = fs.readFileSync(wpConfigPath, 'utf-8');
+  
+  const extractConstant = (name: string): string | null => {
+    const regex = new RegExp(`define\\s*\\(\\s*['"]${name}['"]\\s*,\\s*['"]([^'"]*)['"]\\s*\\)`, 'i');
+    const match = content.match(regex);
+    return match ? match[1] : null;
+  };
+  
+  const extractPrefix = (): string => {
+    const regex = /\$table_prefix\s*=\s*['"]([^'"]*)['"]/;
+    const match = content.match(regex);
+    return match ? match[1] : 'wp_';
+  };
+  
+  const host = extractConstant('DB_HOST') || 'localhost';
+  const name = extractConstant('DB_NAME');
+  const user = extractConstant('DB_USER');
+  const pass = extractConstant('DB_PASSWORD');
+  const prefix = extractPrefix();
+  
+  if (!name || !user) {
+    return null;
+  }
+  
+  return { host, name, user, pass: pass || '', prefix };
+}
+
+/**
+ * Purge orphaned, suspicious, or malicious cron hooks from WordPress database
+ */
+export async function purgeOrphanedCronJobs(
+  targetPath: string,
+  options: {
+    dryRun?: boolean;
+    excludeHooks?: string[];
+    onlySuspicious?: boolean;
+  } = {}
+): Promise<CronPurgeResult> {
+  const { dryRun = false, excludeHooks = [], onlySuspicious = false } = options;
+  
+  // Parse wp-config.php for database credentials
+  const dbConfig = parseWpConfigForCron(targetPath);
+  if (!dbConfig) {
+    return {
+      success: false,
+      totalHooks: 0,
+      hooksDeleted: 0,
+      hooksPreserved: 0,
+      deletedHooks: [],
+      preservedHooks: [],
+      backupCreated: false,
+      message: 'Could not parse wp-config.php for database credentials'
+    };
+  }
+  
+  const { host, user, pass, name, prefix } = dbConfig;
+  
+  // Read current cron option
+  let cronValue: string;
+  try {
+    const query = `SELECT option_value FROM ${prefix}options WHERE option_name = 'cron' LIMIT 1`;
+    const result = await runMysqlQuery(host, user, pass, name, query);
+    
+    // Parse MySQL output (tab-separated, first line is header)
+    const lines = result.trim().split('\n');
+    if (lines.length < 2) {
+      return {
+        success: true,
+        totalHooks: 0,
+        hooksDeleted: 0,
+        hooksPreserved: 0,
+        deletedHooks: [],
+        preservedHooks: [],
+        backupCreated: false,
+        message: 'No cron option found in database'
+      };
+    }
+    cronValue = lines[1];
+  } catch (error) {
+    return {
+      success: false,
+      totalHooks: 0,
+      hooksDeleted: 0,
+      hooksPreserved: 0,
+      deletedHooks: [],
+      preservedHooks: [],
+      backupCreated: false,
+      message: `Failed to read cron option: ${error}`
+    };
+  }
+  
+  // Parse the cron entries
+  const entries = extractCronEntries(cronValue);
+  const allHooks = Array.from(entries.keys());
+  
+  if (allHooks.length === 0) {
+    return {
+      success: true,
+      totalHooks: 0,
+      hooksDeleted: 0,
+      hooksPreserved: 0,
+      deletedHooks: [],
+      preservedHooks: [],
+      backupCreated: false,
+      message: 'No cron hooks found'
+    };
+  }
+  
+  // Get core hooks and plugin hooks for classification
+  const coreHooks = getWordPressCoreCronHooks();
+  const pluginHooks = getInstalledPluginHooks(targetPath);
+  
+  // Determine which hooks to delete
+  const hooksToDelete: string[] = [];
+  const hooksToPreserve: string[] = [];
+  
+  for (const hook of allHooks) {
+    // Skip excluded hooks
+    if (excludeHooks.includes(hook)) {
+      hooksToPreserve.push(hook);
+      continue;
+    }
+    
+    // Classify the hook
+    const entry = classifyCronHook(hook, coreHooks, pluginHooks, []);
+    
+    // Determine if this hook should be deleted
+    let shouldDelete = false;
+    
+    if (onlySuspicious) {
+      // Only delete suspicious/malicious hooks
+      shouldDelete = entry.type === 'suspicious' || entry.type === 'malicious';
+    } else {
+      // Delete orphaned, suspicious, and malicious hooks
+      shouldDelete = entry.type === 'orphaned' || entry.type === 'suspicious' || entry.type === 'malicious';
+    }
+    
+    if (shouldDelete) {
+      hooksToDelete.push(hook);
+    } else {
+      hooksToPreserve.push(hook);
+    }
+  }
+  
+  // If dry run, return what would be deleted
+  if (dryRun) {
+    return {
+      success: true,
+      totalHooks: allHooks.length,
+      hooksDeleted: hooksToDelete.length,
+      hooksPreserved: hooksToPreserve.length,
+      deletedHooks: hooksToDelete,
+      preservedHooks: hooksToPreserve,
+      backupCreated: false,
+      message: `[DRY RUN] Would delete ${hooksToDelete.length} of ${allHooks.length} cron hooks`
+    };
+  }
+  
+  // Create backup directory and backup file
+  const backupDir = path.join(targetPath, 'clean-sweep-cli', 'quarantine-backup');
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupFile = path.join(backupDir, `cron-backup-${timestamp}.txt`);
+  
+  try {
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    fs.writeFileSync(backupFile, cronValue, 'utf-8');
+  } catch (error) {
+    return {
+      success: false,
+      totalHooks: allHooks.length,
+      hooksDeleted: 0,
+      hooksPreserved: allHooks.length,
+      deletedHooks: [],
+      preservedHooks: allHooks,
+      backupCreated: false,
+      message: `Failed to create backup: ${error}`
+    };
+  }
+  
+  // Rebuild cron array without deleted hooks
+  const newEntries = new Map<string, string>();
+  for (const hook of hooksToPreserve) {
+    const entry = entries.get(hook);
+    if (entry) {
+      newEntries.set(hook, entry);
+    }
+  }
+  
+  const newCronValue = rebuildCronArray(newEntries);
+  
+  // Escape the value for SQL
+  const escapedValue = newCronValue.replace(/'/g, "''");
+  
+  // Update the database
+  try {
+    const updateQuery = `UPDATE ${prefix}options SET option_value = '${escapedValue}' WHERE option_name = 'cron'`;
+    await runMysqlQuery(host, user, pass, name, updateQuery);
+  } catch (error) {
+    return {
+      success: false,
+      totalHooks: allHooks.length,
+      hooksDeleted: 0,
+      hooksPreserved: allHooks.length,
+      deletedHooks: [],
+      preservedHooks: allHooks,
+      backupCreated: true,
+      message: `Failed to update cron option: ${error}. Backup saved to ${backupFile}`
+    };
+  }
+  
+  return {
+    success: true,
+    totalHooks: allHooks.length,
+    hooksDeleted: hooksToDelete.length,
+    hooksPreserved: hooksToPreserve.length,
+    deletedHooks: hooksToDelete,
+    preservedHooks: hooksToPreserve,
+    backupCreated: true,
+    message: `Successfully purged ${hooksToDelete.length} cron hooks. Backup saved to ${backupFile}`
+  };
+}
+
 export function readCrontab(readFn?: () => string): string {
   if (readFn) {
     return readFn();
@@ -835,44 +1164,130 @@ export function registerCronGuardCommand(
   program: Command,
   getOpts: () => CliOptions
 ): void {
-  program
+  const cronGuardCmd = program
     .command('cron:guard')
     .description('Monitor clean-sweep cron jobs to ensure they are running properly')
-    .option('--json', 'Output results as JSON', false)
-    .action((cmdOptions) => {
+    .option('--json', 'Output results as JSON', false);
+
+  cronGuardCmd
+    .command('purge')
+    .description('Purge orphaned WordPress cron tasks from deleted plugins (nuclear option)')
+    .option('--dry-run', 'Preview what would be deleted without deleting', false)
+    .option('--force', 'Actually perform the deletion (required)', false)
+    .option('--exclude <hooks>', 'Comma-separated hooks to exclude from deletion')
+    .option('--only-suspicious', 'Only purge suspicious/malicious hooks, keep all others', false)
+    .option('--path <path>', 'WordPress installation path')
+    .action(async (cmdOptions) => {
       const opts = getOpts();
       const useJson = opts.json || cmdOptions.json;
+      const targetPath = cmdOptions.path || opts.path;
+
+      if (!targetPath) {
+        const error = {
+          success: false,
+          message: 'WordPress path not specified. Use --path or run from WordPress directory.',
+        };
+        formatOutput(error, useJson);
+        process.exit(1);
+      }
+
+      const dryRun = cmdOptions.dryRun || (opts.dryRun && !cmdOptions.force && !opts.force);
+      const force = cmdOptions.force || opts.force;
+
+      if (!dryRun && !force) {
+        const error = {
+          success: false,
+          message: 'This command requires either --dry-run or --force flag. Use --dry-run to preview, --force to execute.',
+        };
+        formatOutput(error, useJson);
+        process.exit(1);
+      }
 
       try {
-        const crontab = readCrontab(() => {
-          const { execSync } = require('child_process');
-          try {
-            return execSync('crontab -l', { encoding: 'utf-8' });
-          } catch {
-            return '';
-          }
-        });
+        const excludeHooks = cmdOptions.exclude 
+          ? cmdOptions.exclude.split(',').map((h: string) => h.trim()).filter(Boolean)
+          : [];
 
-        const result = checkCrontabGuard(crontab);
+        const result = await purgeOrphanedCronJobs(targetPath, {
+          dryRun,
+          excludeHooks,
+          onlySuspicious: cmdOptions.onlySuspicious,
+        });
 
         if (useJson) {
           formatOutput(result, true);
         } else {
-          printResults(result);
+          console.log('Clean Sweep Cron Purge');
+          console.log('======================');
+          console.log(`\n${result.message}`);
+          console.log(`\nTotal hooks: ${result.totalHooks}`);
+          console.log(`Hooks deleted: ${result.hooksDeleted}`);
+          console.log(`Hooks preserved: ${result.hooksPreserved}`);
+          
+          if (result.deletedHooks.length > 0) {
+            console.log('\nDeleted hooks:');
+            for (const hook of result.deletedHooks) {
+              console.log(`  - ${hook}`);
+            }
+          }
+          
+          if (result.hooksPreserved > 0 && dryRun) {
+            console.log('\nPreserved hooks (sample):');
+            const sample = result.preservedHooks.slice(0, 10);
+            for (const hook of sample) {
+              console.log(`  - ${hook}`);
+            }
+            if (result.preservedHooks.length > 10) {
+              console.log(`  ... and ${result.preservedHooks.length - 10} more`);
+            }
+          }
         }
 
-        process.exit(result.healthy ? 0 : 1);
+        process.exit(result.success ? 0 : 1);
       } catch (err) {
         const error = {
           success: false,
-          healthy: false,
-          jobsChecked: 0,
-          jobs: [],
-          issues: [],
           message: String(err),
         };
         formatOutput(error, useJson);
         process.exit(1);
       }
     });
+
+  cronGuardCmd.action((cmdOptions) => {
+    const opts = getOpts();
+    const useJson = opts.json || cmdOptions.json;
+
+    try {
+      const crontab = readCrontab(() => {
+        const { execSync } = require('child_process');
+        try {
+          return execSync('crontab -l', { encoding: 'utf-8' });
+        } catch {
+          return '';
+        }
+      });
+
+      const result = checkCrontabGuard(crontab);
+
+      if (useJson) {
+        formatOutput(result, true);
+      } else {
+        printResults(result);
+      }
+
+      process.exit(result.healthy ? 0 : 1);
+    } catch (err) {
+      const error = {
+        success: false,
+        healthy: false,
+        jobsChecked: 0,
+        jobs: [],
+        issues: [],
+        message: String(err),
+      };
+      formatOutput(error, useJson);
+      process.exit(1);
+    }
+  });
 }
