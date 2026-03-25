@@ -35,8 +35,8 @@ function getTimestamp(): string {
 }
 
 function createHumanFormat() {
-  return winston.format.printf(({ level, message }) => {
-    return `[${level.toUpperCase()}] ${message}`;
+  return winston.format.printf(({ message }) => {
+    return `${message}`;
   });
 }
 
