@@ -13,16 +13,6 @@ function ensureLogDir(): void {
   }
 }
 
-function createFileTransport(): winston.transport {
-  ensureLogDir();
-  return new winston.transports.File({
-    filename: path.join(LOG_DIR, LOG_FILE),
-    level: 'debug',
-    maxsize: 10 * 1024 * 1024,
-    maxFiles: 5,
-  });
-}
-
 export interface Logger {
   debug(message: string, meta?: Record<string, unknown>): void;
   info(message: string, meta?: Record<string, unknown>): void;
@@ -32,98 +22,122 @@ export interface Logger {
   setSilent(silent: boolean): void;
 }
 
-let loggerInstance: winston.Logger | null = null;
+interface LoggerInstance {
+  logger: winston.Logger;
+  consoleTransport: winston.transport;
+}
+
+let loggerState: LoggerInstance | null = null;
 let currentLevel: LogLevel = 'info';
-let consoleTransport: winston.transport | null = null;
 
 function getTimestamp(): string {
   return new Date().toISOString();
 }
 
-function formatMessage(level: string, message: string, meta?: Record<string, unknown>): string {
-  const timestamp = getTimestamp();
-  const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
-  return `[${timestamp}] [${level.toUpperCase()}] ${message}${metaStr}`;
+function createHumanFormat() {
+  return winston.format.printf(({ level, message }) => {
+    return `[${level.toUpperCase()}] ${message}`;
+  });
+}
+
+function createFileFormat() {
+  return winston.format((info) => {
+    const output = {
+      timestamp: info.timestamp,
+      level: info.level,
+      message: info.message,
+      [Symbol.for('meta')]: info.meta,
+    };
+    if (info.meta && Object.keys(info.meta).length > 0) {
+      (output as Record<string, unknown>).meta = info.meta;
+    }
+    return output;
+  });
+}
+
+function buildLogger(level: LogLevel): LoggerInstance {
+  const consoleTransport = new winston.transports.Console({
+    format: createHumanFormat(),
+  });
+
+  const fileFormat = winston.format.combine(
+    winston.format.timestamp(),
+    createFileFormat()()
+  );
+
+  const logger = winston.createLogger({
+    level,
+    transports: [
+      consoleTransport,
+      new winston.transports.File({
+        filename: path.join(LOG_DIR, LOG_FILE),
+        level: 'debug',
+        maxsize: 10 * 1024 * 1024,
+        maxFiles: 5,
+        format: fileFormat,
+      }),
+    ],
+  });
+
+  return { logger, consoleTransport };
 }
 
 export function createLogger(level: LogLevel = 'info'): Logger {
   currentLevel = level;
   ensureLogDir();
-
-  consoleTransport = new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.printf(({ level, message, timestamp }) => {
-        return `[${timestamp}] [${level}] ${message}`;
-      })
-    ),
-  });
-
-  loggerInstance = winston.createLogger({
-    level,
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    ),
-    transports: [
-      consoleTransport,
-      createFileTransport(),
-    ],
-  });
+  loggerState = buildLogger(level);
 
   return {
     debug(message: string, meta?: Record<string, unknown>): void {
-      loggerInstance?.debug(formatMessage('debug', message, meta));
+      loggerState?.logger.debug(message, meta as Record<string, unknown>);
     },
     info(message: string, meta?: Record<string, unknown>): void {
-      loggerInstance?.info(formatMessage('info', message, meta));
+      loggerState?.logger.info(message, meta as Record<string, unknown>);
     },
     warn(message: string, meta?: Record<string, unknown>): void {
-      loggerInstance?.warn(formatMessage('warn', message, meta));
+      loggerState?.logger.warn(message, meta as Record<string, unknown>);
     },
     error(message: string, meta?: Record<string, unknown>): void {
-      loggerInstance?.error(formatMessage('error', message, meta));
+      loggerState?.logger.error(message, meta as Record<string, unknown>);
     },
     setLevel(level: LogLevel): void {
       currentLevel = level;
-      if (loggerInstance) {
-        loggerInstance.level = level;
+      if (loggerState) {
+        loggerState.logger.level = level;
       }
     },
     setSilent(silent: boolean): void {
-      if (consoleTransport) {
-        consoleTransport.silent = silent;
+      if (loggerState) {
+        loggerState.consoleTransport.silent = silent;
       }
     },
   };
 }
 
 export function getLogger(): Logger {
-  if (!loggerInstance) {
+  if (!loggerState) {
     return createLogger(currentLevel);
   }
-  const instance = loggerInstance;
+  const { logger, consoleTransport } = loggerState;
   return {
     debug(message: string, meta?: Record<string, unknown>): void {
-      instance.debug(formatMessage('debug', message, meta));
+      logger.debug(message, meta as Record<string, unknown>);
     },
     info(message: string, meta?: Record<string, unknown>): void {
-      instance.info(formatMessage('info', message, meta));
+      logger.info(message, meta as Record<string, unknown>);
     },
     warn(message: string, meta?: Record<string, unknown>): void {
-      instance.warn(formatMessage('warn', message, meta));
+      logger.warn(message, meta as Record<string, unknown>);
     },
     error(message: string, meta?: Record<string, unknown>): void {
-      instance.error(formatMessage('error', message, meta));
+      logger.error(message, meta as Record<string, unknown>);
     },
     setLevel(level: LogLevel): void {
       currentLevel = level;
-      instance.level = level;
+      logger.level = level;
     },
     setSilent(silent: boolean): void {
-      if (consoleTransport) {
-        consoleTransport.silent = silent;
-      }
+      consoleTransport.silent = silent;
     },
   };
 }
