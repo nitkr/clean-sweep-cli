@@ -39,7 +39,8 @@ export function isCleanSweepLine(line: string): boolean {
 
 export function isDisabledCleanSweepLine(line: string): boolean {
   const trimmed = line.trimStart();
-  return trimmed.startsWith('# ') && trimmed.includes('clean-sweep');
+  // Any line starting with # that contains clean-sweep is considered disabled
+  return trimmed.startsWith('#') && trimmed.includes('clean-sweep');
 }
 
 export function parseCrontab(crontab: string): CronJob[] {
@@ -50,21 +51,29 @@ export function parseCrontab(crontab: string): CronJob[] {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed === '' || trimmed.startsWith('#') && !isDisabledCleanSweepLine(trimmed)) {
+    // Skip empty lines and non-clean-sweep comments
+    if (trimmed === '') {
       continue;
     }
 
+    // Check if it's a disabled clean-sweep line (starts with # or # )
+    const isDisabledLine = trimmed.startsWith('#') && trimmed.includes('clean-sweep');
+    if (isDisabledLine) {
+      // Remove all leading # characters and spaces
+      const uncommented = trimmed.replace(/^#+\s*/, '');
+      const parts = uncommented.split(/\s+/);
+      if (parts.length >= 6) {
+        jobs.push({ id: id++, expression: parts.slice(0, 5).join(' '), command: parts.slice(5).join(' '), enabled: false, rawLine: trimmed });
+      }
+      continue;
+    }
+
+    // Check if it's an enabled clean-sweep line
     if (isCleanSweepLine(trimmed)) {
       const parts = trimmed.split(/\s+/);
       const expression = parts.slice(0, 5).join(' ');
       const command = parts.slice(5).join(' ');
       jobs.push({ id: id++, expression, command, enabled: true, rawLine: trimmed });
-    } else if (isDisabledCleanSweepLine(trimmed)) {
-      const uncommented = trimmed.replace(/^#\s*/, '');
-      const parts = uncommented.split(/\s+/);
-      const expression = parts.slice(0, 5).join(' ');
-      const command = parts.slice(5).join(' ');
-      jobs.push({ id: id++, expression, command, enabled: false, rawLine: trimmed });
     }
   }
 
@@ -85,7 +94,7 @@ export function toggleCronJob(
     if (isCleanSweepLine(trimmed) || isDisabledCleanSweepLine(trimmed)) {
       if (currentId === jobId) {
         if (enable && isDisabledCleanSweepLine(trimmed)) {
-          const uncommented = trimmed.replace(/^#\s*/, '');
+          const uncommented = trimmed.replace(/^#+\s*/, '');
           const indent = lines[i].match(/^(\s*)/)?.[1] || '';
           lines[i] = indent + uncommented;
           const parts = uncommented.split(/\s+/);

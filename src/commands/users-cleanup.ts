@@ -343,6 +343,7 @@ async function cleanupInactiveUsers(
         result.usersDeleted++;
       } catch (err) {
         result.errors.push(`Failed to delete user ${user.login} (ID: ${user.id}): ${err}`);
+        // Don't fall through - if an error occurred, don't mark as deleted
       }
     }
   }
