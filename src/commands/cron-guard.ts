@@ -20,11 +20,19 @@ export interface CronJob {
 }
 
 export interface CronGuardIssue {
-  type: 'missing' | 'disabled' | 'invalid_expression' | 'path_not_found' | 'modified' | 'suspicious';
+  type: 'missing' | 'disabled' | 'invalid_expression' | 'path_not_found' | 'modified' | 'suspicious' | 'excessive_frequency';
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   jobId?: number;
   message: string;
   details?: string;
+}
+
+export interface FrequencyAnalysis {
+  expression: string;
+  runsPerDay: number;
+  intervalMinutes: number | null;
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NORMAL';
+  description: string;
 }
 
 export interface CronGuardResult {
@@ -169,6 +177,115 @@ export function detectSuspiciousModifications(job: CronJob): CronGuardIssue[] {
   return issues;
 }
 
+export function getSeverityForInterval(minutes: number): FrequencyAnalysis['severity'] {
+  if (minutes <= 1) return 'CRITICAL';
+  if (minutes <= 5) return 'HIGH';
+  if (minutes <= 15) return 'MEDIUM';
+  if (minutes <= 30) return 'LOW';
+  return 'NORMAL';
+}
+
+export function analyzeCronFrequency(expression: string): FrequencyAnalysis | null {
+  const parts = expression.split(/\s+/);
+  if (parts.length !== 5) {
+    return null;
+  }
+
+  const [minute, hour, , ,] = parts;
+
+  // Detect wildcard minute with step (e.g., */5, */10, */15)
+  const minuteStepMatch = minute.match(/^\*\/(\d+)$/);
+  if (minuteStepMatch) {
+    const interval = parseInt(minuteStepMatch[1], 10);
+    if (interval <= 0 || interval > 59) {
+      return null;
+    }
+    const runsPerDay = Math.floor(1440 / interval);
+
+    return {
+      expression,
+      runsPerDay,
+      intervalMinutes: interval,
+      severity: getSeverityForInterval(interval),
+      description: `Every ${interval} minute${interval > 1 ? 's' : ''} (${runsPerDay} runs/day)`,
+    };
+  }
+
+  // Every minute wildcard (* * * * *)
+  if (minute === '*' && hour === '*') {
+    return {
+      expression,
+      runsPerDay: 1440,
+      intervalMinutes: 1,
+      severity: 'CRITICAL',
+      description: 'Every minute (1440 runs/day) - malware beacon pattern',
+    };
+  }
+
+  // Specific minutes list (e.g., 0,15,30,45 * * * * = every 15 min)
+  const minuteListMatch = minute.match(/^(\d+,)*\d+$/);
+  if (minuteListMatch && hour === '*') {
+    const minutes = minute.split(',').map((m) => parseInt(m, 10)).filter((m) => m >= 0 && m <= 59);
+    if (minutes.length > 1) {
+      // Sort and find gaps
+      minutes.sort((a, b) => a - b);
+      let minGap = 60;
+      for (let i = 0; i < minutes.length - 1; i++) {
+        const gap = minutes[i + 1] - minutes[i];
+        if (gap < minGap) minGap = gap;
+      }
+      // Also check wraparound gap
+      const wraparoundGap = (60 - minutes[minutes.length - 1]) + minutes[0];
+      if (wraparoundGap < minGap) minGap = wraparoundGap;
+
+      const runsPerDay = minutes.length * 24;
+      return {
+        expression,
+        runsPerDay,
+        intervalMinutes: minGap,
+        severity: getSeverityForInterval(minGap),
+        description: `Every ${minGap} minute${minGap > 1 ? 's' : ''} (${runsPerDay} runs/day)`,
+      };
+    }
+  }
+
+  // Range with step (e.g., 0-30/5 * * * *)
+  const rangeStepMatch = minute.match(/^(\d+)-(\d+)\/(\d+)$/);
+  if (rangeStepMatch) {
+    const [, startStr, endStr, stepStr] = rangeStepMatch;
+    const start = parseInt(startStr, 10);
+    const end = parseInt(endStr, 10);
+    const step = parseInt(stepStr, 10);
+    if (step > 0) {
+      const runsPerDay = Math.floor(((end - start) / step) + 1) * 24;
+      return {
+        expression,
+        runsPerDay,
+        intervalMinutes: step,
+        severity: getSeverityForInterval(step),
+        description: `Every ${step} minute${step > 1 ? 's' : ''} during ${start}-${end} (${runsPerDay} runs/day)`,
+      };
+    }
+  }
+
+  // Single specific minute (e.g., 30 * * * * = every hour at :30)
+  const singleMinuteMatch = minute.match(/^(\d+)$/);
+  if (singleMinuteMatch && hour === '*') {
+    const minuteVal = parseInt(singleMinuteMatch[1], 10);
+    if (minuteVal >= 0 && minuteVal <= 59) {
+      return {
+        expression,
+        runsPerDay: 24,
+        intervalMinutes: 60,
+        severity: 'NORMAL',
+        description: 'Every hour at minute ' + minuteVal,
+      };
+    }
+  }
+
+  return null;
+}
+
 export function guardJobs(jobs: CronJob[], checkFn?: (p: string) => boolean): CronGuardResult {
   const issues: CronGuardIssue[] = [];
 
@@ -205,6 +322,18 @@ export function guardJobs(jobs: CronJob[], checkFn?: (p: string) => boolean): Cr
 
     const suspiciousIssues = detectSuspiciousModifications(job);
     issues.push(...suspiciousIssues);
+
+    // Check execution frequency
+    const frequency = analyzeCronFrequency(job.expression);
+    if (frequency && frequency.severity !== 'NORMAL') {
+      issues.push({
+        type: 'excessive_frequency',
+        severity: frequency.severity as 'HIGH' | 'MEDIUM' | 'LOW',
+        jobId: job.id,
+        message: `Suspicious execution frequency: ${frequency.description}`,
+        details: `Line ${job.lineNumber}: ${job.rawLine}`,
+      });
+    }
   }
 
   return {
