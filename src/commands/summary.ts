@@ -49,6 +49,8 @@ const HIGH_SEVERITY_TYPES = new Set([
   'php_proc_open', 'php_popen', 'php_pcntl_exec', 'php_assert',
   'php_preg_replace_eval', 'php_create_function', 'js_eval_dynamic',
   'js_child_process_exec', 'js_child_process_spawn',
+  'php-webshell-001', 'php-webshell-002', 'php-webshell-003', 'php-webshell-003b', 'php-webshell-003c',
+  'js-eval-001', 'js-eval-002', 'js-eval-003',
 ]);
 
 const MEDIUM_SEVERITY_TYPES = new Set([
@@ -58,6 +60,7 @@ const MEDIUM_SEVERITY_TYPES = new Set([
   'js_setinterval_dynamic', 'js_eval_template_literal', 'js_function_constructor',
   'js_settimeout_concat', 'js_setinterval_concat', 'js_process_require',
   'js_process_binding',
+  'js-eval-005', 'js-eval-006',
 ]);
 
 export function classifySeverity(type: string): string {
@@ -67,8 +70,8 @@ export function classifySeverity(type: string): string {
 }
 
 export function classifyCategory(type: string): string {
-  if (type.startsWith('php_')) return 'php-code';
-  if (type.startsWith('js_')) return 'js-code';
+  if (type.startsWith('php_') || type.startsWith('php-')) return 'php-code';
+  if (type.startsWith('js_') || type.startsWith('js-')) return 'js-code';
   if (type === 'base64_large' || type === 'char_encoding' || type === 'hex_escape' ||
       type === 'url_encoding' || type === 'nested_encoding' || type === 'mixed_case_base64') {
     return 'encoded-content';

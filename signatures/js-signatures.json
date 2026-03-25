@@ -31,15 +31,6 @@
       "category": "code-execution"
     },
     {
-      "id": "js-eval-004",
-      "name": "Function Constructor",
-      "description": "Uses Function constructor for dynamic code",
-      "severity": "critical",
-      "pattern": "Function\\s*\\(\\s*['\"`]",
-      "type": "malicious-eval",
-      "category": "code-execution"
-    },
-    {
       "id": "js-eval-005",
       "name": "setTimeout Code Execution",
       "description": "Uses setTimeout with string for code execution",
@@ -94,15 +85,6 @@
       "category": "system-info"
     },
     {
-      "id": "js-api-005",
-      "name": "Dynamic Property Access",
-      "description": "Uses dynamic property access for obfuscation",
-      "severity": "high",
-      "pattern": "window\\.\\[\\s*['\"`]",
-      "type": "suspicious-api",
-      "category": "obfuscation"
-    },
-    {
       "id": "js-api-006",
       "name": "eval() with Variable",
       "description": "Uses eval with variable content",
@@ -117,15 +99,6 @@
       "description": "Uses document.write for dynamic content",
       "severity": "medium",
       "pattern": "document\\.write\\s*\\(",
-      "type": "xss",
-      "category": "cross-site-scripting"
-    },
-    {
-      "id": "js-xss-002",
-      "name": "innerHTML Assignment",
-      "description": "Uses innerHTML with potentially unsafe data",
-      "severity": "medium",
-      "pattern": "\\.innerHTML\\s*=",
       "type": "xss",
       "category": "cross-site-scripting"
     },
@@ -157,29 +130,11 @@
       "category": "cross-site-scripting"
     },
     {
-      "id": "js-obfuscation-001",
-      "name": "String.fromCharCode",
-      "description": "Uses String.fromCharCode for obfuscation",
-      "severity": "medium",
-      "pattern": "String\\.fromCharCode\\s*\\(",
-      "type": "obfuscation",
-      "category": "obfuscation"
-    },
-    {
       "id": "js-obfuscation-002",
       "name": "Unescape Usage",
       "description": "Uses unescape for decoding obfuscated content",
       "severity": "medium",
       "pattern": "unescape\\s*\\(",
-      "type": "obfuscation",
-      "category": "obfuscation"
-    },
-    {
-      "id": "js-obfuscation-003",
-      "name": "Encoded URI Component",
-      "description": "Uses decodeURIComponent for obfuscated content",
-      "severity": "medium",
-      "pattern": "decodeURIComponent\\s*\\(",
       "type": "obfuscation",
       "category": "obfuscation"
     },
@@ -191,33 +146,6 @@
       "pattern": "<script[^>]+src\\s*=\\s*['\"]http",
       "type": "suspicious",
       "category": "remote-code"
-    },
-    {
-      "id": "js-suspicious-002",
-      "name": "Event Handler Injection",
-      "description": "Injects event handlers via JavaScript",
-      "severity": "medium",
-      "pattern": "onclick\\s*=|onerror\\s*=|onload\\s*=",
-      "type": "suspicious",
-      "category": "event-injection"
-    },
-    {
-      "id": "js-suspicious-003",
-      "name": "Location Assignment",
-      "description": "Manipulates window location unexpectedly",
-      "severity": "high",
-      "pattern": "location\\.href\\s*=|location\\.assign\\s*\\(",
-      "type": "suspicious",
-      "category": "redirection"
-    },
-    {
-      "id": "js-suspicious-004",
-      "name": "Cookie Manipulation",
-      "description": "Manipulates cookies via JavaScript",
-      "severity": "medium",
-      "pattern": "document\\.cookie\\s*=",
-      "type": "suspicious",
-      "category": "data-theft"
     },
     {
       "id": "js-suspicious-005",
