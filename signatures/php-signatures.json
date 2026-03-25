@@ -39,21 +39,13 @@
       "type": "webshell",
       "category": "remote-code-execution"
     },
-    {
-      "id": "php-webshell-005",
-      "name": "cURL-based Remote Execution",
-      "description": "Fetches and executes remote code via cURL",
-      "severity": "critical",
-      "pattern": "curl_exec\\s*\\(\\s*\\$",
-      "type": "webshell",
-      "category": "remote-code-execution"
-    },
+
     {
       "id": "php-backdoor-001",
-      "name": "Function Callback Backdoor",
-      "description": "Uses call_user_func for dynamic code execution",
+      "name": "Function Callback Backdoor with User Input",
+      "description": "Uses call_user_func with user input for dynamic code execution",
       "severity": "critical",
-      "pattern": "call_user_func\\s*\\(",
+      "pattern": "call_user_func\\s*\\(\\s*\\$(?:GET|POST|REQUEST|COOKIE|SERVER)",
       "type": "backdoor",
       "category": "remote-code-execution"
     },
@@ -86,67 +78,26 @@
     },
     {
       "id": "php-backdoor-005",
-      "name": "Array Map Execution",
-      "description": "Uses array_map with callable for code execution",
+      "name": "Array Map Execution with User Input",
+      "description": "Uses array_map with user input data for code execution",
       "severity": "high",
-      "pattern": "array_map\\s*\\(\\s*['\"\\$]",
+      "pattern": "array_map\\s*\\(\\s*\\$[a-zA-Z_]\\w*,\\s*\\$_(?:GET|POST|REQUEST|COOKIE)",
       "type": "backdoor",
       "category": "remote-code-execution"
     },
-    {
-      "id": "php-encoded-001",
-      "name": "gzinflate Decompression",
-      "description": "Decompresses gzinflate encoded data",
-      "severity": "high",
-      "pattern": "gzinflate\\s*\\(",
-      "type": "encoded-shell",
-      "category": "obfuscation"
-    },
-    {
-      "id": "php-encoded-002",
-      "name": "gzuncompress Decompression",
-      "description": "Decompresses gzdeflate encoded data",
-      "severity": "high",
-      "pattern": "gzuncompress\\s*\\(",
-      "type": "encoded-shell",
-      "category": "obfuscation"
-    },
-    {
-      "id": "php-encoded-003",
-      "name": "str_rot13 Obfuscation",
-      "description": "Uses ROT13 encoding for obfuscation",
-      "severity": "medium",
-      "pattern": "str_rot13\\s*\\(",
-      "type": "encoded-shell",
-      "category": "obfuscation"
-    },
-    {
-      "id": "php-encoded-004",
-      "name": "Hex Encoding",
-      "description": "Uses hex2bin for encoding obfuscation",
-      "severity": "high",
-      "pattern": "hex2bin\\s*\\(",
-      "type": "encoded-shell",
-      "category": "obfuscation"
-    },
+
+
+
     {
       "id": "php-encoded-005",
-      "name": "Chunk Split Encoding",
-      "description": "Uses chunk_split for encoding manipulation",
+      "name": "Chunk Split with User Input",
+      "description": "Uses chunk_split with user input for encoding manipulation",
       "severity": "medium",
-      "pattern": "chunk_split\\s*\\(",
+      "pattern": "chunk_split\\s*\\(\\s*\\$_(?:GET|POST|REQUEST|COOKIE)",
       "type": "encoded-shell",
       "category": "obfuscation"
     },
-    {
-      "id": "php-suspicious-001",
-      "name": "Process Execution Functions",
-      "description": "Multiple process execution functions present",
-      "severity": "high",
-      "pattern": "(shell_exec|exec|passthru|system)\\s*\\(",
-      "type": "suspicious-function",
-      "category": "system-command"
-    },
+
     {
       "id": "php-suspicious-002",
       "name": "Proc Open Execution",
@@ -185,19 +136,19 @@
     },
     {
       "id": "php-suspicious-006",
-      "name": "Multiple Encoding Layers",
-      "description": "Multiple encoding functions chained together",
+      "name": "Multiple Encoding Layers with eval",
+      "description": "Multiple encoding functions chained with eval execution",
       "severity": "critical",
-      "pattern": "(base64_decode|gzinflate|str_rot13)\\s*\\([^)]*\\$[^)]*\\)",
+      "pattern": "eval\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13)\\s*\\([^)]*\\$[^)]*\\)",
       "type": "multi-layer-obfuscation",
       "category": "obfuscation"
     },
     {
       "id": "php-suspicious-007",
-      "name": "Variable Function Call",
-      "description": "Uses variable function names for execution",
+      "name": "Variable Function Call with Dangerous Functions",
+      "description": "Uses variable function names with dangerous encoding functions",
       "severity": "high",
-      "pattern": "\\$[a-zA-Z_]\\w*\\s*\\(",
+      "pattern": "\\$[a-zA-Z_]\\w*\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13|eval)\\s*\\(",
       "type": "dynamic-function",
       "category": "remote-code-execution"
     },
