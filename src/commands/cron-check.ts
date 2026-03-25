@@ -274,7 +274,7 @@ export function registerCronCheckCommand(
         const crontab = readCrontab(() => {
           const { execSync } = require('child_process');
           try {
-            return execSync('crontab -l', { encoding: 'utf-8' });
+            return execSync('crontab -l 2>/dev/null', { encoding: 'utf-8' });
           } catch {
             return '';
           }
