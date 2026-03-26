@@ -10,7 +10,7 @@ import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefau
 import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
 import { loadWhitelist, applyWhitelist, WhitelistConfig } from '../whitelist';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
-import { severityColor, severityIcon, icons, createTable, createVulnerabilityTable, createThreatTable } from '../output';
+import { severityColor, severityIcon, icons, createTable, createVulnerabilityTable, createThreatTable, truncatePath } from '../output';
 
 interface CliOptions {
   dryRun: boolean;
@@ -272,7 +272,7 @@ export function registerScanCommand(
               const lineInfo = threat.line !== null ? `:${threat.line}` : '';
               const sev = (threat as any).severity || 'medium';
               threatTable.push([
-                threat.file + lineInfo,
+                truncatePath(threat.file + lineInfo, 120),
                 threat.type,
                 `${severityIcon(sev)} ${severityColor(sev)(sev.toUpperCase())}`
               ]);

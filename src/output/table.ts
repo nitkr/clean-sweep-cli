@@ -39,6 +39,6 @@ export function truncatePath(path: string, maxLength: number = 80): string {
 export function createThreatTable(): Table {
   return createTable({
     head: ['File', 'Type', 'Severity'],
-    colWidths: [80, 30, 15],
+    colWidths: [120, 30, 15],
   });
 }

@@ -182,6 +182,46 @@
       "category": "c2-communication",
       "obfuscatedPattern": "OzMINysxCiJNaEdsIkMpVhAKGk9scAMmChUuGRoSTQ==",
       "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-007",
+      "name": "ClickFix Iframe Shown Cookie Check",
+      "description": "Checks for iframeShown cookie to track displayed次数",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "anti-analysis",
+      "obfuscatedPattern": "JidRZGc3AiNYJVcCJEkpGHgsJBJdHn8VKjIFZCsxCzpQLUF4ZQYsEzEtJAkD",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-fake-captcha-001",
+      "name": "ClickFix Fake CAPTCHA Title",
+      "description": "Fake CAPTCHA page title used in ClickFix campaign",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "social-engineering",
+      "obfuscatedPattern": "czUYOCQ7WgJcK0cjJVInVgYwMwRTDX4VJjUdKXY=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-fake-captcha-002",
+      "name": "ClickFix Fake CAPTCHA Clipboard Textarea",
+      "description": "Hidden textarea for clipboard manipulation in fake CAPTCHA",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "social-engineering",
+      "obfuscatedPattern": "czUUNDw/FjRYaFs1cQQ9GiwoNAhZQzVMOyQJOGp+FjRYLF0/IF9g",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-fake-captcha-003",
+      "name": "ClickFix Fake CAPTCHA Verifying Text",
+      "description": "Verifying text indicator in fake CAPTCHA",
+      "severity": "medium",
+      "type": "clickfix-campaign",
+      "category": "social-engineering",
+      "obfuscatedPattern": "czIBLSZ+DTUEakQ0Pk84Dyw2MUpMVCkVbX8=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     }
   ]
 }
