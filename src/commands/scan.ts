@@ -313,10 +313,16 @@ export function registerScanCommand(
         }
 
         const output = {
-          ...result,
+          path: result.path,
+          totalFiles: result.totalFiles,
+          totalDirectories: result.totalDirectories,
+          threats: result.threats,
+          safe: result.safe,
+          dryRun: result.dryRun,
+          whitelisted: result.whitelisted,
           ...(checkVulns && { vulnerabilities }),
           ...(checkIntegrity && { integrity }),
-          ...(findUnknown && { unknownFiles }),
+          ...(findUnknown && { unknownFiles: { count: unknownFiles?.count ?? 0 } }),
           suggestions,
         };
 
