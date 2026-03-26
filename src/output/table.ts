@@ -27,9 +27,18 @@ export function createVulnerabilityTable(): Table {
   });
 }
 
+export function truncatePath(path: string, maxLength: number = 80): string {
+  if (path.length <= maxLength) {
+    return path;
+  }
+  const startLength = Math.floor((maxLength - 3) / 2);
+  const endLength = maxLength - 3 - startLength;
+  return path.slice(0, startLength) + '...' + path.slice(-endLength);
+}
+
 export function createThreatTable(): Table {
   return createTable({
     head: ['File', 'Type', 'Severity'],
-    colWidths: [50, 30, 15],
+    colWidths: [80, 30, 15],
   });
 }

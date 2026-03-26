@@ -1,6 +1,6 @@
 export { icons } from './icons';
 export { severityColor, severityIcon } from './colors';
-export { createTable, createVulnerabilityTable, createThreatTable } from './table';
+export { createTable, createVulnerabilityTable, createThreatTable, truncatePath } from './table';
 export { outputJson, outputErrorJson } from './json';
 export { formatScanOutput } from './formatter';
 

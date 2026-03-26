@@ -1,6 +1,6 @@
 import { icons } from './icons';
 import { severityColor, severityIcon } from './colors';
-import { createVulnerabilityTable, createThreatTable, createTable } from './table';
+import { createVulnerabilityTable, createThreatTable, createTable, truncatePath } from './table';
 import chalk from 'chalk';
 
 export interface ScanOutputOptions {
@@ -33,7 +33,7 @@ export function formatScanOutput(options: ScanOutputOptions): void {
     for (const threat of options.threats as any[]) {
       const sev = (threat as any).severity || 'medium';
       table.push([
-        (threat as any).file || threat,
+        truncatePath((threat as any).file || threat),
         (threat as any).type || 'unknown',
         `${severityIcon(sev)} ${severityColor(sev)(sev.toUpperCase())}`
       ]);

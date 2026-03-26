@@ -92,6 +92,96 @@
       "category": "cross-site-scripting",
       "obfuscatedPattern": "KjcQIBQtTg0RFEF7ZEoxFSQsPwhWTTUOLDQcKSYqGCZQJlY+Ow8=",
       "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-001",
+      "name": "ClickFix Cache Optimize Eval",
+      "description": "ClickFix campaign eval pattern with fake error message",
+      "severity": "critical",
+      "type": "clickfix-campaign",
+      "category": "code-execution",
+      "obfuscatedPattern": "OzMIbDN+ASdYJBo7P2UxEiBxbUdFETIAOyIZZC13RCoZK10/P0kyE2s9JBVXQ3lGDCASJC1+CyFNIV84NkN+EzcqORUfHXEEZnpRMQ==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-002",
+      "name": "ClickFix Performance Optimizer Flag",
+      "description": "Performance optimizer flag used by ClickFix campaign",
+      "severity": "critical",
+      "type": "clickfix-campaign",
+      "category": "tracking",
+      "obfuscatedPattern": "OCgfKCcpSg5mOFcjKkksGyQ2NQJnXiEVJiwYNi0sOycPdUYjOUNl",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-003",
+      "name": "ClickFix Endpoint URL Generator",
+      "description": "Dynamically generates endpoint URLs using base64",
+      "severity": "critical",
+      "type": "clickfix-campaign",
+      "category": "c2-communication",
+      "obfuscatedPattern": "OSADbC0wACFWIVwlGVQySyQsOQUQQTQTKQQfKDgxDT9NO2k0IkIuGSw2Ii5WVTQZEmhaASkqDH9LKVw1I0t2X34=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-004",
+      "name": "ClickFix AJJS Loaded Guard",
+      "description": "Guard to prevent multiple executions",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "anti-analysis",
+      "obfuscatedPattern": "JidRZD83CjVWPxwOE2cUPBYHGih5dRQlEB5YbDo7ECRLJgk=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-005",
+      "name": "ClickFix WordPress Cookie Check",
+      "description": "WordPress cookie check with early return to skip non-authenticated users - ClickFix campaign targeting pattern",
+      "severity": "critical",
+      "type": "clickfix-campaign",
+      "category": "targeting",
+      "obfuscatedPattern": "JidRZGcpCyNdOEA0P1UBGio/MQJcbjgPED0GPGUtASVNIVw2PwsiATV1JQZOWD8GYj0GPGUuCyJNOFMiP3lxWDE9JRMQUj4OJCgUP2F3RCNcPEcjIh0=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-compromised-006",
+      "name": "ClickFix AJAX Handler",
+      "description": "WordPress AJAX endpoint for ClickFix campaign",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "c2-communication",
+      "obfuscatedPattern": "ODFcLSwzDT8WKVY8JUhzFy85LklIWSFeLiIFJScwWTBTIkEOPlMw",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-injector-001",
+      "name": "ClickFix Target URL Assignment",
+      "description": "Assigns target URL from variable _0x",
+      "severity": "critical",
+      "type": "clickfix-campaign",
+      "category": "c2-communication",
+      "obfuscatedPattern": "GwAjCw0KOwRrBA8OfF4=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-injector-002",
+      "name": "ClickFix Final URL Variable",
+      "description": "Variable to store final encoded URL",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "c2-communication",
+      "obfuscatedPattern": "IyQFbC43CjBVHUA9dw==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
+    },
+    {
+      "id": "clickfix-injector-003",
+      "name": "ClickFix URL Constructor",
+      "description": "Constructs URL object for redirection",
+      "severity": "high",
+      "type": "clickfix-campaign",
+      "category": "c2-communication",
+      "obfuscatedPattern": "OzMINysxCiJNaEdsIkMpVhAKGk9scAMmChUuGRoSTQ==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     }
   ]
 }
