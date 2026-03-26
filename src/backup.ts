@@ -1,10 +1,28 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import AdmZip from 'adm-zip';
 
 export interface BackupResult {
   success: boolean;
   backupPath: string;
   filesBackedUp: number;
+}
+
+function countFilesRecursive(dirPath: string): number {
+  let count = 0;
+  if (!fs.existsSync(dirPath)) return count;
+  
+  const entries = fs.readdirSync(dirPath);
+  for (const entry of entries) {
+    const entryPath = path.join(dirPath, entry);
+    const stat = fs.statSync(entryPath);
+    if (stat.isDirectory()) {
+      count += countFilesRecursive(entryPath);
+    } else {
+      count++;
+    }
+  }
+  return count;
 }
 
 export function createBackup(targetPath: string): BackupResult {
@@ -13,9 +31,12 @@ export function createBackup(targetPath: string): BackupResult {
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(targetPath, 'clean-sweep-cli', 'backups', `wp-core-${timestamp}`);
+  const backupDir = path.join(targetPath, 'clean-sweep-cli', 'backups');
+  const zipPath = path.join(backupDir, `wp-core-${timestamp}.zip`);
   
   fs.mkdirSync(backupDir, { recursive: true });
+  
+  const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'backup-staging-'));
   
   const preserveFiles = ['wp-config.php', '.htaccess', 'robots.txt'];
   let filesBackedUp = 0;
@@ -25,24 +46,30 @@ export function createBackup(targetPath: string): BackupResult {
     const srcPath = path.join(targetPath, entry);
     
     if (entry === 'wp-content') {
-      const destPath = path.join(backupDir, entry);
+      const destPath = path.join(stagingDir, entry);
       copyRecursiveSync(srcPath, destPath);
-      filesBackedUp++;
+      filesBackedUp += countFilesRecursive(srcPath);
     } else if (preserveFiles.includes(entry)) {
-      fs.copyFileSync(srcPath, path.join(backupDir, entry));
+      fs.copyFileSync(srcPath, path.join(stagingDir, entry));
       filesBackedUp++;
     } else {
       const stat = fs.statSync(srcPath);
       if (stat.isFile()) {
-        fs.copyFileSync(srcPath, path.join(backupDir, entry));
+        fs.copyFileSync(srcPath, path.join(stagingDir, entry));
         filesBackedUp++;
       }
     }
   }
   
+  const zip = new AdmZip();
+  zip.addLocalFolder(stagingDir);
+  zip.writeZip(zipPath);
+  
+  fs.rmSync(stagingDir, { recursive: true, force: true });
+  
   return {
     success: true,
-    backupPath: backupDir,
+    backupPath: zipPath,
     filesBackedUp,
   };
 }
@@ -88,18 +115,29 @@ export function createPluginBackup(pluginsPath: string, pluginSlug: string): Plu
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  // pluginsPath is wp-content/plugins, so wp root = path.dirname(path.dirname(pluginsPath))
   const wpRoot = path.dirname(path.dirname(pluginsPath));
-  const backupDir = path.join(wpRoot, 'clean-sweep-cli', 'backups', `plugin-${pluginSlug}-${timestamp}`);
+  const backupDir = path.join(wpRoot, 'clean-sweep-cli', 'backups');
+  const zipPath = path.join(backupDir, `plugin-${pluginSlug}-${timestamp}.zip`);
   
   fs.mkdirSync(backupDir, { recursive: true });
-  copyRecursiveSync(pluginDir, path.join(backupDir, pluginSlug));
+  
+  const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'plugin-backup-staging-'));
+  const pluginStagingDir = path.join(stagingDir, pluginSlug);
+  copyRecursiveSync(pluginDir, pluginStagingDir);
+  
+  const filesBackedUp = countFilesRecursive(pluginStagingDir);
+  
+  const zip = new AdmZip();
+  zip.addLocalFolder(stagingDir);
+  zip.writeZip(zipPath);
+  
+  fs.rmSync(stagingDir, { recursive: true, force: true });
   
   return {
     success: true,
-    backupPath: backupDir,
+    backupPath: zipPath,
     pluginSlug,
-    filesBackedUp: 1,
+    filesBackedUp,
   };
 }
 
@@ -117,17 +155,28 @@ export function createThemeBackup(themesPath: string, themeSlug: string): ThemeB
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  // themesPath is wp-content/themes, so wp root = path.dirname(path.dirname(themesPath))
   const wpRoot = path.dirname(path.dirname(themesPath));
-  const backupDir = path.join(wpRoot, 'clean-sweep-cli', 'backups', `theme-${themeSlug}-${timestamp}`);
+  const backupDir = path.join(wpRoot, 'clean-sweep-cli', 'backups');
+  const zipPath = path.join(backupDir, `theme-${themeSlug}-${timestamp}.zip`);
   
   fs.mkdirSync(backupDir, { recursive: true });
-  copyRecursiveSync(themeDir, path.join(backupDir, themeSlug));
+  
+  const stagingDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'theme-backup-staging-'));
+  const themeStagingDir = path.join(stagingDir, themeSlug);
+  copyRecursiveSync(themeDir, themeStagingDir);
+  
+  const filesBackedUp = countFilesRecursive(themeStagingDir);
+  
+  const zip = new AdmZip();
+  zip.addLocalFolder(stagingDir);
+  zip.writeZip(zipPath);
+  
+  fs.rmSync(stagingDir, { recursive: true, force: true });
   
   return {
     success: true,
-    backupPath: backupDir,
+    backupPath: zipPath,
     themeSlug,
-    filesBackedUp: 1,
+    filesBackedUp,
   };
 }

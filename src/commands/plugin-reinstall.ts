@@ -16,6 +16,12 @@ interface CliOptions {
   verbose: boolean;
 }
 
+interface ReinstallResult {
+  success: boolean;
+  reinstalled: string[];
+  failed: { slug: string; error: string }[];
+}
+
 function formatOutput(data: unknown, useJson: boolean): void {
   if (useJson) {
     console.log(JSON.stringify(data, null, 2));
@@ -39,6 +45,87 @@ function copyDirRecursive(src: string, dest: string): void {
   }
 }
 
+async function reinstallPlugin(
+  pluginSlug: string,
+  pluginDir: string,
+  pluginsPath: string,
+  createBackupFlag: boolean,
+  verbose: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const downloadUrl = `https://downloads.wordpress.org/plugin/${pluginSlug}.latest-stable.zip`;
+
+  if (verbose) {
+    console.log(`Processing plugin: ${pluginSlug}`);
+    console.log(`Downloading ${pluginSlug} from wordpress.org`);
+  }
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-plugin-'));
+  const zipPath = path.join(tempDir, 'plugin.zip');
+
+  try {
+    const response = await fetch(downloadUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download plugin: ${response.status} ${response.statusText}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    fs.writeFileSync(zipPath, Buffer.from(buffer));
+
+    const zip = new AdmZip(zipPath);
+    const extractDir = path.join(tempDir, 'extracted');
+    zip.extractAllTo(extractDir, true);
+
+    const entries = fs.readdirSync(extractDir);
+    let extractedPluginDir: string | null = null;
+
+    for (const entry of entries) {
+      const entryPath = path.join(extractDir, entry);
+      const stat = fs.statSync(entryPath);
+      if (stat.isDirectory()) {
+        extractedPluginDir = entryPath;
+        break;
+      }
+    }
+
+    if (!extractedPluginDir) {
+      throw new Error('Invalid plugin archive: no plugin directory found');
+    }
+
+    const pluginExists = fs.existsSync(pluginDir);
+
+    if (pluginExists) {
+      if (createBackupFlag) {
+        const backupResult = createPluginBackup(pluginsPath, pluginSlug);
+        if (backupResult && verbose) {
+          console.log(`Backup created at: ${backupResult.backupPath}`);
+        }
+      }
+
+      fs.rmSync(pluginDir, { recursive: true, force: true });
+      if (verbose) {
+        console.log(`Removed old plugin files`);
+      }
+    }
+
+    copyDirRecursive(extractedPluginDir, pluginDir);
+
+    if (verbose) {
+      console.log(`Successfully reinstalled ${pluginSlug}`);
+    }
+
+    return { success: true };
+  } catch (err) {
+    const errorMessage = String(err);
+    if (verbose) {
+      console.log(`Failed to reinstall ${pluginSlug}: ${errorMessage}`);
+    }
+    return { success: false, error: errorMessage };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 export function registerPluginReinstallCommand(
   program: Command,
   getOpts: () => CliOptions
@@ -51,6 +138,7 @@ export function registerPluginReinstallCommand(
     .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually perform the reinstall', false)
     .option('--backup', 'Create backup before reinstall (default: true)', true)
+    .option('--verbose', 'Show detailed progress')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
@@ -58,21 +146,16 @@ export function registerPluginReinstallCommand(
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const createBackupFlag = cmdOptions.backup !== false;
       const useJson = opts.json || cmdOptions.json;
+      const verbose = opts.verbose || cmdOptions.verbose;
 
       const logger = createLogger('info');
       if (useJson) {
         logger.setSilent(true);
       }
 
-      if (!pluginSlug) {
-        const error = { success: false, error: 'Plugin slug is required. Use --plugin <slug>' };
-        formatOutput(error, opts.json || cmdOptions.json);
-        process.exit(1);
-      }
-
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -81,7 +164,7 @@ export function registerPluginReinstallCommand(
         wpResult = detectWordPressRoot(targetPath);
         if (!wpResult.found) {
           const error = { success: false, error: formatWpPathError(wpResult, 'plugin:reinstall'), path: targetPath };
-          formatOutput(error, opts.json || cmdOptions.json);
+          formatOutput(error, useJson);
           process.exit(1);
         }
         targetPath = wpResult.path;
@@ -92,26 +175,93 @@ export function registerPluginReinstallCommand(
         } else {
           wpResult = { path: targetPath, found: false, searchedPaths: [targetPath] };
           const error = { success: false, error: formatWpPathError(wpResult, 'plugin:reinstall'), path: targetPath };
-          formatOutput(error, opts.json || cmdOptions.json);
+          formatOutput(error, useJson);
           process.exit(1);
         }
       }
 
       const pluginsPath = path.join(targetPath, 'wp-content', 'plugins');
+
+      if (!pluginSlug) {
+        if (!fs.existsSync(pluginsPath)) {
+          const error = { success: false, error: 'Plugins directory does not exist', path: pluginsPath };
+          formatOutput(error, useJson);
+          process.exit(1);
+        }
+
+        const entries = fs.readdirSync(pluginsPath);
+        const pluginSlugs = entries.filter((entry) => {
+          const entryPath = path.join(pluginsPath, entry);
+          const stat = fs.statSync(entryPath);
+          return stat.isDirectory() && entry !== '.';
+        });
+
+        if (pluginSlugs.length === 0) {
+          const result: ReinstallResult = {
+            success: true,
+            reinstalled: [],
+            failed: [],
+          };
+          formatOutput(result, useJson);
+          return;
+        }
+
+        if (dryRun) {
+          const result: ReinstallResult = {
+            success: true,
+            reinstalled: [],
+            failed: [],
+          };
+          formatOutput(result, useJson);
+          if (!useJson) {
+            console.log(`\n[DRY RUN] Would reinstall all plugins: ${pluginSlugs.join(', ')}`);
+          }
+          return;
+        }
+
+        const reinstalled: string[] = [];
+        const failed: { slug: string; error: string }[] = [];
+
+        for (const slug of pluginSlugs) {
+          const pluginDir = path.join(pluginsPath, slug);
+          const result = await reinstallPlugin(slug, pluginDir, pluginsPath, createBackupFlag, verbose);
+          if (result.success) {
+            reinstalled.push(slug);
+          } else {
+            failed.push({ slug, error: result.error || 'Unknown error' });
+          }
+        }
+
+        const finalResult: ReinstallResult = {
+          success: failed.length === 0,
+          reinstalled,
+          failed,
+        };
+
+        formatOutput(finalResult, useJson);
+
+        if (failed.length > 0) {
+          console.log('\nPlugins that could not be re-installed:');
+          for (const { slug, error } of failed) {
+            console.log(`  - ${slug}: ${error}`);
+          }
+          process.exit(1);
+        }
+        return;
+      }
+
       const pluginDir = path.join(pluginsPath, pluginSlug);
-      const pluginExists = fs.existsSync(pluginDir);
       const downloadUrl = `https://downloads.wordpress.org/plugin/${pluginSlug}.latest-stable.zip`;
 
       if (dryRun) {
+        const pluginExists = fs.existsSync(pluginDir);
         const result = {
           success: true,
           pluginSlug,
-          version: 'latest-stable',
-          backupPath: null as string | null,
           dryRun: true,
         };
-
-        if (!opts.json && !cmdOptions.json) {
+        formatOutput(result, useJson);
+        if (!useJson) {
           console.log(`\n[DRY RUN] Would reinstall plugin: ${pluginSlug}`);
           if (pluginExists) {
             console.log(`[DRY RUN] Would backup existing plugin at: ${pluginDir}`);
@@ -120,90 +270,26 @@ export function registerPluginReinstallCommand(
           console.log(`[DRY RUN] Would download new version from: ${downloadUrl}`);
           console.log(`[DRY RUN] Would place plugin at: ${pluginDir}`);
         }
-
-        if (opts.json || cmdOptions.json) {
-          formatOutput(result, opts.json || cmdOptions.json);
-        }
         return;
       }
 
-      logger.info(`Downloading ${pluginSlug} from wordpress.org`);
+      const result = await reinstallPlugin(pluginSlug, pluginDir, pluginsPath, createBackupFlag, verbose);
 
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-plugin-'));
-      const zipPath = path.join(tempDir, 'plugin.zip');
-
-      try {
-        const response = await fetch(downloadUrl);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to download plugin: ${response.status} ${response.statusText}`);
-        }
-
-        const buffer = await response.arrayBuffer();
-        fs.writeFileSync(zipPath, Buffer.from(buffer));
-
-        const zip = new AdmZip(zipPath);
-        const extractDir = path.join(tempDir, 'extracted');
-        zip.extractAllTo(extractDir, true);
-
-        const entries = fs.readdirSync(extractDir);
-        let extractedPluginDir: string | null = null;
-        
-        for (const entry of entries) {
-          const entryPath = path.join(extractDir, entry);
-          const stat = fs.statSync(entryPath);
-          if (stat.isDirectory()) {
-            extractedPluginDir = entryPath;
-            break;
-          }
-        }
-
-        if (!extractedPluginDir) {
-          throw new Error('Invalid plugin archive: no plugin directory found');
-        }
-
-        const result = {
-          success: true,
-          pluginSlug,
-          version: 'latest-stable',
-          backupPath: null as string | null,
-          dryRun,
-        };
-
-        if (!opts.json && !cmdOptions.json) {
-          if (pluginExists) {
-            if (createBackupFlag) {
-              const backupResult = createPluginBackup(pluginsPath, pluginSlug);
-              if (backupResult) {
-                result.backupPath = backupResult.backupPath;
-                console.log(`Backup created at: ${backupResult.backupPath}`);
-              }
-            } else {
-              console.log(`Skipping backup (--backup=false)`);
-            }
-            
-            fs.rmSync(pluginDir, { recursive: true, force: true });
-            console.log(`Removed old plugin files`);
-          }
-
-          copyDirRecursive(extractedPluginDir, pluginDir);
-          console.log(`Installed plugin: ${pluginSlug}`);
-        }
-
-        if (opts.json || cmdOptions.json) {
-          formatOutput(result, opts.json || cmdOptions.json);
-        }
-      } catch (err) {
+      if (!result.success) {
         const error = {
           success: false,
+          error: result.error || 'Unknown error',
           pluginSlug,
-          error: String(err),
-          dryRun,
         };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
-      } finally {
-        fs.rmSync(tempDir, { recursive: true, force: true });
       }
+
+      const successResult = {
+        success: true,
+        reinstalled: [pluginSlug],
+        failed: [],
+      };
+      formatOutput(successResult, useJson);
     });
 }

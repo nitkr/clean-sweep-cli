@@ -49,11 +49,13 @@ export function registerCoreRepairCommand(
     .option('--force', 'Actually perform the replacement', false)
     .option('--backup', 'Create backup before repair (default: true)', true)
     .option('--version <version>', 'Specific WordPress version to install (e.g., 6.4.2)')
+    .option('--verbose', 'Show detailed progress during repair')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const useJson = opts.json || cmdOptions.json;
+      const verbose = cmdOptions.verbose || opts.verbose;
 
       const logger = createLogger('info');
       if (useJson) {
@@ -161,6 +163,7 @@ export function registerCoreRepairCommand(
         const extractDir = path.join(tempDir, 'extracted');
         fs.mkdirSync(extractDir, { recursive: true });
         await tar.extract({ file: zipPath, cwd: extractDir });
+        if (verbose) console.log('Extracting WordPress archive...');
 
         const wordpressDir = path.join(extractDir, 'wordpress');
         if (!fs.existsSync(wordpressDir)) {
@@ -196,6 +199,7 @@ export function registerCoreRepairCommand(
           }
 
           for (const file of filesToReplace) {
+            if (verbose) console.log(`Processing file: ${file}`);
             const srcPath = path.join(wordpressDir, file);
             const destPath = path.join(targetPath, file);
 
