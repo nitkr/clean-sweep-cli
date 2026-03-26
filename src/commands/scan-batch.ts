@@ -217,7 +217,7 @@ export function registerScanBatchCommand(
           );
           results.push(result);
 
-          if (!opts.json) {
+          if (!useJson) {
             const status = result.safe ? 'SAFE' : 'UNSAFE';
             console.log(`[${status}] ${normalizedPath} - ${result.threats.length} threat(s), ${result.totalFiles} files`);
           }
@@ -229,7 +229,7 @@ export function registerScanBatchCommand(
 
       const report = buildBatchReport(results);
 
-      if (!opts.json) {
+      if (!useJson) {
         console.log(`\nBatch scan complete:`);
         console.log(`  Directories scanned: ${report.totalDirectories}`);
         console.log(`  Total files: ${report.totalFiles}`);
