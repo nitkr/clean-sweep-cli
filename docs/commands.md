@@ -24,7 +24,7 @@ These flags work with all commands:
 Scan a WordPress installation for malware, vulnerabilities, and integrity issues.
 
 ```bash
-clean-sweep scan --path /var/www/html
+clean-sweep scan
 clean-sweep scan --path /var/www/html --check-vulnerabilities --check-integrity --find-unknown
 clean-sweep scan --path /var/www/html --verbose --report --html-report --json
 ```
@@ -47,7 +47,7 @@ clean-sweep scan --path /var/www/html --verbose --report --html-report --json
 Repair WordPress core files by replacing with fresh download from wordpress.org. Preserves `wp-config.php`, `wp-content`, `.htaccess`, and `robots.txt`.
 
 ```bash
-clean-sweep core:repair --path /var/www/html
+clean-sweep core:repair
 clean-sweep core:repair --path /var/www/html --force
 clean-sweep core:repair --path /var/www/html --version 6.4.2 --force
 ```
@@ -66,7 +66,7 @@ clean-sweep core:repair --path /var/www/html --version 6.4.2 --force
 Reinstall an official WordPress.org plugin. Downloads latest stable version and replaces existing installation.
 
 ```bash
-clean-sweep plugin:reinstall --path /var/www/html --plugin akismet
+clean-sweep plugin:reinstall --plugin akismet
 clean-sweep plugin:reinstall --path /var/www/html --plugin wordpress-seo --force
 ```
 
@@ -84,7 +84,7 @@ clean-sweep plugin:reinstall --path /var/www/html --plugin wordpress-seo --force
 Reinstall an official WordPress.org theme. Downloads latest stable version and replaces existing theme.
 
 ```bash
-clean-sweep theme:reinstall --path /var/www/html --theme twentytwentyfour
+clean-sweep theme:reinstall --theme twentytwentyfour
 clean-sweep theme:reinstall --path /var/www/html --theme twentytwentyfour --force
 ```
 
@@ -120,7 +120,7 @@ clean-sweep file:extract --path /var/www/html --zip upload.tar.gz --target wp-co
 Scan WordPress database tables for suspicious content (malware, spam, malicious links).
 
 ```bash
-clean-sweep db:scan --path /var/www/html
+clean-sweep db:scan
 clean-sweep db:scan --path /var/www/html --force
 clean-sweep db:scan --path /var/www/html --db-host localhost --db-name wp_db --db-user root --db-pass secret --force
 ```
@@ -141,7 +141,7 @@ clean-sweep db:scan --path /var/www/html --db-host localhost --db-name wp_db --d
 Generate WordPress database optimization queries and scripts.
 
 ```bash
-clean-sweep db:optimize --path /var/www/html
+clean-sweep db:optimize
 clean-sweep db:optimize --path /var/www/html --force
 ```
 
@@ -175,7 +175,7 @@ clean-sweep cleanup --path /var/www/html --force
 Show WordPress installation health status.
 
 ```bash
-clean-sweep status --path /var/www/html
+clean-sweep status
 clean-sweep status --path /var/www/html --json
 ```
 
@@ -192,7 +192,7 @@ Displays: WordPress version, plugins count, themes count, database connection st
 Quarantine infected files by moving them to a quarantine folder.
 
 ```bash
-clean-sweep quarantine --path /var/www/html
+clean-sweep quarantine
 clean-sweep quarantine --path /var/www/html --force
 clean-sweep quarantine --path /var/www/html --json
 ```
@@ -211,7 +211,7 @@ clean-sweep quarantine --path /var/www/html --json
 Restore quarantined files to their original locations.
 
 ```bash
-clean-sweep restore --path /var/www/html
+clean-sweep restore
 clean-sweep restore --path /var/www/html --folder 2026-03-23T10-00-00 --force
 clean-sweep restore --path /var/www/html --json
 ```
@@ -231,7 +231,7 @@ clean-sweep restore --path /var/www/html --json
 Show a summary of scan results with risk scoring.
 
 ```bash
-clean-sweep summary --path /var/www/html
+clean-sweep summary
 clean-sweep summary --path /var/www/html --json
 ```
 
@@ -340,7 +340,7 @@ clean-sweep signature:create \
 Audit file permissions for common security issues.
 
 ```bash
-clean-sweep permissions:check --path /var/www/html
+clean-sweep permissions:check
 clean-sweep permissions:check --path /var/www/html --json
 clean-sweep permissions:check --path /var/www/html --fix
 ```
@@ -357,7 +357,7 @@ clean-sweep permissions:check --path /var/www/html --fix
 Validate WordPress wp-config.php for syntax and security issues.
 
 ```bash
-clean-sweep config:validate --path /var/www/html
+clean-sweep config:validate
 clean-sweep config:validate --path /var/www/html --json
 clean-sweep config:validate --config-file /path/to/wp-config.php
 ```
@@ -374,7 +374,7 @@ clean-sweep config:validate --config-file /path/to/wp-config.php
 Check WordPress security hardening configuration.
 
 ```bash
-clean-sweep harden:check --path /var/www/html
+clean-sweep harden:check
 clean-sweep harden:check --path /var/www/html --json
 ```
 
@@ -391,7 +391,7 @@ Checks: .htaccess security rules, file permissions, security plugin detection, h
 Automatically fix common security issues (permissions, config, hardening).
 
 ```bash
-clean-sweep fix --path /var/www/html
+clean-sweep fix
 clean-sweep fix --path /var/www/html --dry-run
 clean-sweep fix --path /var/www/html --force --json
 ```
@@ -409,7 +409,7 @@ clean-sweep fix --path /var/www/html --force --json
 Check plugin and theme licenses for GPL compatibility.
 
 ```bash
-clean-sweep licenses:check --path /var/www/html
+clean-sweep licenses:check
 clean-sweep licenses:check --path /var/www/html --json
 ```
 
@@ -424,7 +424,7 @@ clean-sweep licenses:check --path /var/www/html --json
 Check WordPress admin users for suspicious accounts and default settings.
 
 ```bash
-clean-sweep users:check --path /var/www/html
+clean-sweep users:check
 clean-sweep users:check --path /var/www/html --json
 clean-sweep users:check --path /var/www/html --db
 ```
@@ -554,7 +554,7 @@ clean-sweep cron:guard --json
 Generate cron job configuration for periodic malware scans.
 
 ```bash
-clean-sweep schedule --path /var/www/html --daily
+clean-sweep schedule --daily
 clean-sweep schedule --path /var/www/html --weekly
 clean-sweep schedule --path /var/www/html --monthly --json
 ```
@@ -591,7 +591,7 @@ clean-sweep scan:batch --list-file /path/to/directories.txt --json
 Check project dependencies for known vulnerabilities.
 
 ```bash
-clean-sweep deps:check --path /var/www/html
+clean-sweep deps:check
 clean-sweep deps:check --path /var/www/html --severity critical --json
 ```
 
