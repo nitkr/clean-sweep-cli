@@ -165,7 +165,7 @@ export function registerScanCommand(
       if (!fs.existsSync(normalizedPath)) {
         const error = { error: 'Path does not exist', path: normalizedPath };
         logger.error('Scan failed: path does not exist', { path: normalizedPath });
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -173,7 +173,7 @@ export function registerScanCommand(
       if (!stats.isDirectory()) {
         const error = { error: 'Path is not a directory', path: normalizedPath };
         logger.error('Scan failed: path is not a directory', { path: normalizedPath });
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -209,7 +209,7 @@ export function registerScanCommand(
           const vulnResult = await scanVulnerabilities(normalizedPath);
           vulnerabilities = vulnResult.vulnerabilities;
 
-          if (!opts.json && !cmdOptions.json) {
+          if (!useJson) {
             console.log('Checking for vulnerabilities...');
             if (vulnResult.wordpress) {
               console.log(`  WordPress: ${vulnResult.wordpress}`);
@@ -223,7 +223,7 @@ export function registerScanCommand(
         if (checkIntegrity) {
           integrity = await checkWordPressIntegrity(normalizedPath);
 
-          if (!opts.json && !cmdOptions.json) {
+          if (!useJson) {
             console.log('Checking core file integrity...');
             if (integrity.wordpressVersion) {
               console.log(`  WordPress version: ${integrity.wordpressVersion}`);
@@ -242,7 +242,7 @@ export function registerScanCommand(
         if (findUnknown) {
           unknownFiles = await findUnknownFiles(normalizedPath);
 
-          if (!opts.json && !cmdOptions.json) {
+          if (!useJson) {
             console.log('Finding unknown files...');
             console.log(`  Unknown files found: ${unknownFiles.count}`);
             if (unknownFiles.files.length > 0 && unknownFiles.files.length <= 20) {
@@ -261,7 +261,7 @@ export function registerScanCommand(
 
         const suggestions = buildSuggestions(result.threats, vulnerabilities, integrity);
 
-        if (!opts.json && !cmdOptions.json) {
+        if (!useJson) {
           if (result.threats.length > 0) {
             console.log(`\n${icons.error} ${colors.critical('UNSAFE')} – Issues found\n`);
             
@@ -285,7 +285,7 @@ export function registerScanCommand(
           }
         }
 
-        if (!opts.json && !cmdOptions.json && vulnerabilities.length > 0) {
+        if (!useJson && vulnerabilities.length > 0) {
           console.log(`\nVULNERABILITIES (${vulnerabilities.length})\n`);
           
           const vulnTable = createVulnerabilityTable();
@@ -303,7 +303,7 @@ export function registerScanCommand(
           console.log(vulnTable.toString());
         }
 
-        if (!opts.json && !cmdOptions.json && suggestions.length > 0) {
+        if (!useJson && suggestions.length > 0) {
           console.log('\nSuggestions:');
           for (const suggestion of suggestions) {
             console.log(`  - ${suggestion}`);
@@ -322,7 +322,9 @@ export function registerScanCommand(
           const reportData = generateReport(normalizedPath, output, suggestions);
           const reportPath = getDefaultReportPath(normalizedPath);
           saveReport(reportData, reportPath);
-          console.log(`\nReport saved to: ${reportPath}`);
+          if (!useJson) {
+            console.log(`\nReport saved to: ${reportPath}`);
+          }
           logger.info('Report saved', { reportPath });
         }
 
@@ -338,7 +340,9 @@ export function registerScanCommand(
           const html = generateHtmlReport(htmlReportData);
           const htmlReportPath = getDefaultHtmlReportPath(normalizedPath);
           saveHtmlReport(html, htmlReportPath);
-          console.log(`\nHTML report saved to: ${htmlReportPath}`);
+          if (!useJson) {
+            console.log(`\nHTML report saved to: ${htmlReportPath}`);
+          }
           logger.info('HTML report saved', { htmlReportPath });
         }
 
@@ -348,13 +352,13 @@ export function registerScanCommand(
           logger.warn(`Scan completed - found ${result.threats.length} threat(s)`);
         }
 
-        if (opts.json || cmdOptions.json) {
+        if (useJson) {
           formatOutput(output, true);
         }
       } catch (err) {
         const error = { error: 'Scan failed', message: String(err) };
         logger.error('Scan failed with error', { error: String(err) });
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
     });

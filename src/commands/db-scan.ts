@@ -184,6 +184,7 @@ async function scanDatabase(
   targetPath: string,
   options: { dryRun: boolean; dbHost?: string; dbName?: string; dbUser?: string; dbPass?: string; useJson?: boolean }
 ): Promise<DbScanResult> {
+  const useJson = options.useJson ?? false;
   const wpConfigPath = path.join(targetPath, 'wp-config.php');
   const credentials = parseWpConfig(wpConfigPath);
   
@@ -223,7 +224,7 @@ async function scanDatabase(
     scannedTables.push(table.name);
     
     if (options.dryRun) {
-      if (!options.useJson) {
+      if (!useJson) {
         console.log(`\n[DRY RUN] Would scan table: ${table.name}`);
         for (const pattern of DB_SUSPICIOUS_PATTERNS.slice(0, 3)) {
           console.log(`[DRY RUN]   Pattern: ${pattern.type}`);
@@ -231,12 +232,12 @@ async function scanDatabase(
         console.log(`[DRY RUN]   Query example: SELECT ID, ${table.column} FROM ${table.name} WHERE ${table.column} LIKE '%pattern%'`);
       }
     } else {
-      const threats = await scanDbTable(dbCredentials, table.name, table.column, false, options.useJson ?? false);
+      const threats = await scanDbTable(dbCredentials, table.name, table.column, false, useJson);
       allThreats.push(...threats);
     }
   }
   
-  if (options.dryRun && !options.useJson) {
+  if (options.dryRun && !useJson) {
     console.log(`\n[DRY RUN] MySQL client check:`);
     exec('which mysql', (error) => {
       if (error) {

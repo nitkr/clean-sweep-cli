@@ -719,9 +719,19 @@ export function registerUsersCheckCommand(
       }
       targetPath = wpResult.path;
 
-      if (!useJson) {
-        console.log(`Checking WordPress admin users in: ${targetPath}`);
+      if (useJson) {
+        let result: UsersCheckResult;
+        if (useDatabase) {
+          result = await checkUsersFromDatabase(targetPath);
+        } else {
+          result = checkUsers(targetPath);
+        }
+        console.log(JSON.stringify(result, null, 2));
+        process.exit((result.bySeverity['HIGH'] || 0) > 0 ? 1 : 0);
+        return;
       }
+
+      console.log(`Checking WordPress admin users in: ${targetPath}`);
 
       let result: UsersCheckResult;
 
@@ -731,55 +741,50 @@ export function registerUsersCheckCommand(
         result = checkUsers(targetPath);
       }
 
-      if (!result.usersFound && !useJson) {
+      if (!result.usersFound) {
         console.warn('Warning: No WordPress user data found. Try --db to query the live database.');
       }
 
-      if (useJson) {
-        console.log(JSON.stringify(result, null, 2));
-      } else {
-        if (result.usersFound) {
-          console.log(`\nSource: ${result.source}`);
-          console.log(`\n--- WordPress Users ---`);
-          console.log(`Users found: ${result.summary.total}`);
-          console.log(`  Administrators: ${result.summary.administrators}`);
-          console.log(`  Editors: ${result.summary.editors}`);
-          console.log(`  Authors: ${result.summary.authors}`);
-          console.log(`  Contributors: ${result.summary.contributors}`);
-          console.log(`  Subscribers: ${result.summary.subscribers}`);
+      if (result.usersFound) {
+        console.log(`\nSource: ${result.source}`);
+        console.log(`\n--- WordPress Users ---`);
+        console.log(`Users found: ${result.summary.total}`);
+        console.log(`  Administrators: ${result.summary.administrators}`);
+        console.log(`  Editors: ${result.summary.editors}`);
+        console.log(`  Authors: ${result.summary.authors}`);
+        console.log(`  Contributors: ${result.summary.contributors}`);
+        console.log(`  Subscribers: ${result.summary.subscribers}`);
 
-          // Issues
-          if (result.issues.length === 0) {
-            console.log('\n✓ No user security issues found.');
-          } else {
-            console.log(`\n--- Security Issues (${result.issues.length}) ---`);
+        if (result.issues.length === 0) {
+          console.log('\n✓ No user security issues found.');
+        } else {
+          console.log(`\n--- Security Issues (${result.issues.length}) ---`);
 
-            for (const issue of result.issues) {
-              console.log(`\n[${issue.severity}] ${issue.description}`);
-              console.log(`  → ${issue.recommendation}`);
-            }
+          for (const issue of result.issues) {
+            console.log(`\n[${issue.severity}] ${issue.description}`);
+            console.log(`  → ${issue.recommendation}`);
+          }
 
-            console.log('\nSeverity breakdown:');
-            for (const sev of ['HIGH', 'MEDIUM', 'LOW']) {
-              const count = result.bySeverity[sev] || 0;
-              if (count > 0) {
-                console.log(`  ${sev}: ${count}`);
-              }
-            }
-
-            if (result.summary.inactiveOver90Days > 0) {
-              console.log(`\n⚠ ${result.summary.inactiveOver90Days} user(s) inactive for 90+ days`);
-            }
-            if (result.summary.disposableEmails > 0) {
-              console.log(`⚠ ${result.summary.disposableEmails} user(s) using disposable emails`);
-            }
-            if (result.summary.suspiciousLogins > 0) {
-              console.log(`⚠ ${result.summary.suspiciousLogins} user(s) with suspicious login names`);
+          console.log('\nSeverity breakdown:');
+          for (const sev of ['HIGH', 'MEDIUM', 'LOW']) {
+            const count = result.bySeverity[sev] || 0;
+            if (count > 0) {
+              console.log(`  ${sev}: ${count}`);
             }
           }
-        } else {
-          console.log('No user data found. Try --db to query the live database.');
+
+          if (result.summary.inactiveOver90Days > 0) {
+            console.log(`\n⚠ ${result.summary.inactiveOver90Days} user(s) inactive for 90+ days`);
+          }
+          if (result.summary.disposableEmails > 0) {
+            console.log(`⚠ ${result.summary.disposableEmails} user(s) using disposable emails`);
+          }
+          if (result.summary.suspiciousLogins > 0) {
+            console.log(`⚠ ${result.summary.suspiciousLogins} user(s) with suspicious login names`);
+          }
         }
+      } else {
+        console.log('No user data found. Try --db to query the live database.');
       }
 
       const hasHighSeverity = (result.bySeverity['HIGH'] || 0) > 0;

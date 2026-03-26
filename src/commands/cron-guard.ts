@@ -1216,7 +1216,7 @@ export function registerCronGuardCommand(
 
         if (useJson) {
           formatOutput(result, true);
-        } else {
+        } else if (!useJson) {
           console.log('Clean Sweep Cron Purge');
           console.log('======================');
           console.log(`\n${result.message}`);
@@ -1272,7 +1272,7 @@ export function registerCronGuardCommand(
 
       if (useJson) {
         formatOutput(result, true);
-      } else {
+      } else if (!useJson) {
         printResults(result);
       }
 

@@ -125,7 +125,7 @@ export function registerCoreRepairCommand(
           dryRun: true,
         };
 
-        if (!opts.json && !cmdOptions.json) {
+        if (!useJson) {
           console.log('\n[DRY RUN] Would replace core files (standard WordPress core file list):');
           for (const file of standardCoreFiles) {
             console.log(`  - ${file}`);
@@ -136,9 +136,7 @@ export function registerCoreRepairCommand(
           }
         }
 
-        if (opts.json || cmdOptions.json) {
-          formatOutput(result, opts.json || cmdOptions.json);
-        }
+        formatOutput(result, useJson);
         return;
       }
 
