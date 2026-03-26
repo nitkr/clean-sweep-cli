@@ -20,11 +20,12 @@ export interface WordPressUser {
 }
 
 export interface UserIssue {
-  user: WordPressUser;
-  type: 'default_admin' | 'admin_default_email' | 'multiple_admins' | 'suspicious_login' | 'weak_role_assignment' | 'inactive_user' | 'disposable_email' | 'spam_email' | 'no_role' | 'deleted_status';
+  user?: WordPressUser;
+  type: UserIssueType;
   severity: 'HIGH' | 'MEDIUM' | 'LOW';
   description: string;
   recommendation: string;
+  sessions?: SessionToken[];
 }
 
 export interface UsersCheckResult {
@@ -415,3 +416,43 @@ export const SUSPICIOUS_LOGIN_PATTERNS = [
 // WordPress roles
 export const WP_ROLES = ['administrator', 'editor', 'author', 'contributor', 'subscriber'];
 export const ADMIN_ROLES = ['administrator'];
+
+// Session Token interfaces
+export interface SessionToken {
+  token: string;
+  created: number;
+  lastActive: number;
+  ip: string;
+  deviceType: string;
+  browser: string;
+}
+
+export interface UserSessions {
+  userId: number;
+  username: string;
+  sessions: SessionToken[];
+  orphaned: boolean;
+}
+
+export type UserIssueType = 
+  | 'default_admin' 
+  | 'admin_default_email' 
+  | 'multiple_admins' 
+  | 'suspicious_login' 
+  | 'weak_role_assignment' 
+  | 'inactive_user' 
+  | 'disposable_email' 
+  | 'spam_email' 
+  | 'no_role' 
+  | 'deleted_status'
+  | 'orphaned_session'
+  | 'expired_session';
+
+export interface UserIssue {
+  user?: WordPressUser;
+  type: UserIssueType;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  description: string;
+  recommendation: string;
+  sessions?: SessionToken[];
+}

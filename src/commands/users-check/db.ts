@@ -1,7 +1,12 @@
 import { exec } from 'child_process';
 import * as path from 'path';
-import { WordPressUser } from './types';
+import { WordPressUser, SessionToken } from './types';
 import { parseWpConfig, DbCredentials } from './parsers';
+
+export function getDbConfig(wpPath: string): DbCredentials | null {
+  const wpConfigPath = path.join(wpPath, 'wp-config.php');
+  return parseWpConfig(wpConfigPath);
+}
 
 // Execute shell command and return promise
 export function execPromise(command: string): Promise<string> {
@@ -124,4 +129,84 @@ export async function queryDatabase(wpPath: string): Promise<WordPressUser[]> {
   }
 
   return users;
+}
+
+export function parseSerializedSessions(serialized: string): SessionToken[] {
+  try {
+    const sessions: SessionToken[] = [];
+    const sessionMatches = serialized.matchAll(/i:\d+;a:\d+:\{[^}]+\}/g);
+    
+    for (const match of sessionMatches) {
+      const entry = match[0];
+      const tokenMatch = entry.match(/s:10:"token";s:\d+:"([^"]+)"/);
+      const ipMatch = entry.match(/s:10:"ip_address";s:\d+:"([^"]+)"/);
+      const createdMatch = entry.match(/s:10:"creation";i:(\d+)/);
+      const lastActiveMatch = entry.match(/s:15:"last_active";i:(\d+)/);
+      
+      if (tokenMatch) {
+        sessions.push({
+          token: tokenMatch[1].substring(0, 20) + '...',
+          created: createdMatch ? parseInt(createdMatch[1]) : 0,
+          lastActive: lastActiveMatch ? parseInt(lastActiveMatch[1]) : 0,
+          ip: ipMatch ? ipMatch[1] : 'unknown',
+          deviceType: 'unknown',
+          browser: 'unknown'
+        });
+      }
+    }
+    
+    return sessions;
+  } catch {
+    return [];
+  }
+}
+
+export async function querySessionTokens(userId: number, wpPath: string): Promise<SessionToken[]> {
+  const config = getDbConfig(wpPath);
+  if (!config) return [];
+  
+  const { host, user, pass, name, prefix } = config;
+  
+  const sessionQuery = `SELECT meta_value FROM ${prefix}usermeta WHERE user_id = ${userId} AND meta_key = 'session_tokens'`;
+  const sessionCmd = `mysql -h "${host}" -u "${user}"${pass ? ` -p"${pass}"` : ''} "${name}" -e "${sessionQuery}" -B 2>/dev/null`;
+  
+  try {
+    const output = await execPromise(sessionCmd);
+    const lines = output.trim().split('\n');
+    if (lines.length < 2) return [];
+    
+    const serialized = lines[1];
+    return parseSerializedSessions(serialized);
+  } catch {
+    return [];
+  }
+}
+
+export async function queryAllSessionTokens(wpPath: string): Promise<Map<number, SessionToken[]>> {
+  const config = getDbConfig(wpPath);
+  if (!config) return new Map();
+  
+  const { host, user, pass, name, prefix } = config;
+  
+  const sessionQuery = `SELECT user_id, meta_value FROM ${prefix}usermeta WHERE meta_key = 'session_tokens'`;
+  const sessionCmd = `mysql -h "${host}" -u "${user}"${pass ? ` -p"${pass}"` : ''} "${name}" -e "${sessionQuery}" -B 2>/dev/null`;
+  
+  const userSessions = new Map<number, SessionToken[]>();
+  
+  try {
+    const output = await execPromise(sessionCmd);
+    const lines = output.trim().split('\n');
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split('\t');
+      if (parts.length >= 2) {
+        const userId = parseInt(parts[0]);
+        const metaValue = parts[1];
+        const sessions = parseSerializedSessions(metaValue);
+        userSessions.set(userId, sessions);
+      }
+    }
+  } catch {
+  }
+  
+  return userSessions;
 }

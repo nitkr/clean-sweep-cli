@@ -1,6 +1,7 @@
 import {
   WordPressUser,
   UserIssue,
+  SessionToken,
   DEFAULT_ADMIN_LOGIN,
   DEFAULT_ADMIN_EMAIL,
   WP_ROLES,
@@ -182,7 +183,6 @@ export function runAllUserChecks(users: WordPressUser[]): UserIssue[] {
   issues.push(...checkDefaultEmail(users));
   issues.push(...checkMultipleAdmins(users));
   
-  // Import detectSuspiciousLogins from parsers
   const { detectSuspiciousLogins } = require('./parsers');
   issues.push(...detectSuspiciousLogins(users));
   
@@ -193,5 +193,50 @@ export function runAllUserChecks(users: WordPressUser[]): UserIssue[] {
   issues.push(...checkInactiveUsers(users));
   issues.push(...checkUserStatus(users));
 
+  return issues;
+}
+
+export function checkOrphanedSessions(users: WordPressUser[], sessionsByUser: Map<number, SessionToken[]>): UserIssue[] {
+  const issues: UserIssue[] = [];
+  const allUserIds = users.map(u => u.id);
+  
+  sessionsByUser.forEach((sessions, userId) => {
+    if (!allUserIds.includes(userId) && sessions.length > 0) {
+      issues.push({
+        type: 'orphaned_session',
+        severity: 'HIGH',
+        description: `Found ${sessions.length} session(s) for non-existent user ID ${userId}`,
+        recommendation: 'Delete orphaned session tokens from wp_usermeta for security',
+        sessions
+      });
+    }
+  });
+  
+  return issues;
+}
+
+export function checkExpiredSessions(users: WordPressUser[], sessionsByUser: Map<number, SessionToken[]>, daysThreshold: number = 30): UserIssue[] {
+  const issues: UserIssue[] = [];
+  const now = Math.floor(Date.now() / 1000);
+  const thresholdSeconds = daysThreshold * 24 * 60 * 60;
+  
+  users.forEach(user => {
+    const sessions = sessionsByUser.get(user.id) || [];
+    const expiredSessions = sessions.filter(s => 
+      s.lastActive > 0 && (now - s.lastActive) > thresholdSeconds
+    );
+    
+    if (expiredSessions.length > 0) {
+      issues.push({
+        user,
+        type: 'expired_session',
+        severity: 'MEDIUM',
+        description: `User "${user.login}" has ${expiredSessions.length} session(s) inactive for ${daysThreshold}+ days`,
+        recommendation: 'Consider removing expired sessions for this user',
+        sessions: expiredSessions
+      });
+    }
+  });
+  
   return issues;
 }

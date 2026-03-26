@@ -5,6 +5,7 @@ import { detectWordPressRoot, formatWpPathError } from '../../wp-path-detector';
 import {
   CliOptions,
   WordPressUser,
+  UserIssue,
   UsersCheckResult
 } from './types';
 import {
@@ -12,10 +13,13 @@ import {
   parseSqlExport
 } from './parsers';
 import {
-  runAllUserChecks
+  runAllUserChecks,
+  checkOrphanedSessions,
+  checkExpiredSessions
 } from './detectors';
 import {
-  queryDatabase
+  queryDatabase,
+  queryAllSessionTokens
 } from './db';
 
 // Helper function for output formatting
@@ -84,12 +88,20 @@ export function checkUsers(targetPath: string): UsersCheckResult {
 // Check users from live database
 export async function checkUsersFromDatabase(targetPath: string): Promise<UsersCheckResult> {
   const users = await queryDatabase(targetPath);
-  return buildCheckResult(targetPath, users, 'database');
+  const sessionsByUser = await queryAllSessionTokens(targetPath);
+  const allUserIds = users.map(u => u.id);
+  
+  const sessionIssues = [
+    ...checkOrphanedSessions(users, sessionsByUser),
+    ...checkExpiredSessions(users, sessionsByUser)
+  ];
+  
+  return buildCheckResult(targetPath, users, 'database', sessionIssues);
 }
 
 // Build the complete check result from users array
-function buildCheckResult(targetPath: string, users: WordPressUser[], source: UsersCheckResult['source']): UsersCheckResult {
-  const issues = runAllUserChecks(users);
+function buildCheckResult(targetPath: string, users: WordPressUser[], source: UsersCheckResult['source'], sessionIssues: UserIssue[] = []): UsersCheckResult {
+  const issues = [...runAllUserChecks(users), ...sessionIssues];
 
   const bySeverity: Record<string, number> = {};
   for (const issue of issues) {
