@@ -16,6 +16,12 @@ interface CliOptions {
   verbose: boolean;
 }
 
+interface ReinstallResult {
+  success: boolean;
+  reinstalled: string[];
+  failed: { slug: string; error: string }[];
+}
+
 function formatOutput(data: unknown, useJson: boolean): void {
   if (useJson) {
     console.log(JSON.stringify(data, null, 2));
@@ -39,6 +45,87 @@ function copyDirRecursive(src: string, dest: string): void {
   }
 }
 
+async function reinstallTheme(
+  themeSlug: string,
+  themeDir: string,
+  themesPath: string,
+  createBackupFlag: boolean,
+  verbose: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const downloadUrl = `https://downloads.wordpress.org/theme/${themeSlug}.latest-stable.zip`;
+
+  if (verbose) {
+    console.log(`Processing theme: ${themeSlug}`);
+    console.log(`Downloading ${themeSlug} from wordpress.org`);
+  }
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-theme-'));
+  const zipPath = path.join(tempDir, 'theme.zip');
+
+  try {
+    const response = await fetch(downloadUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download theme: ${response.status} ${response.statusText}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    fs.writeFileSync(zipPath, Buffer.from(buffer));
+
+    const zip = new AdmZip(zipPath);
+    const extractDir = path.join(tempDir, 'extracted');
+    zip.extractAllTo(extractDir, true);
+
+    const entries = fs.readdirSync(extractDir);
+    let extractedThemeDir: string | null = null;
+
+    for (const entry of entries) {
+      const entryPath = path.join(extractDir, entry);
+      const stat = fs.statSync(entryPath);
+      if (stat.isDirectory()) {
+        extractedThemeDir = entryPath;
+        break;
+      }
+    }
+
+    if (!extractedThemeDir) {
+      throw new Error('Invalid theme archive: no theme directory found');
+    }
+
+    const themeExists = fs.existsSync(themeDir);
+
+    if (themeExists) {
+      if (createBackupFlag) {
+        const backupResult = createThemeBackup(themesPath, themeSlug);
+        if (backupResult && verbose) {
+          console.log(`Backup created at: ${backupResult.backupPath}`);
+        }
+      }
+
+      fs.rmSync(themeDir, { recursive: true, force: true });
+      if (verbose) {
+        console.log(`Removed old theme files`);
+      }
+    }
+
+    copyDirRecursive(extractedThemeDir, themeDir);
+
+    if (verbose) {
+      console.log(`Successfully reinstalled ${themeSlug}`);
+    }
+
+    return { success: true };
+  } catch (err) {
+    const errorMessage = String(err);
+    if (verbose) {
+      console.log(`Failed to reinstall ${themeSlug}: ${errorMessage}`);
+    }
+    return { success: false, error: errorMessage };
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 export function registerThemeReinstallCommand(
   program: Command,
   getOpts: () => CliOptions
@@ -51,6 +138,7 @@ export function registerThemeReinstallCommand(
     .option('--dry-run', 'Preview changes without applying them', false)
     .option('--force', 'Actually perform the reinstall', false)
     .option('--backup', 'Create backup before reinstall (default: true)', true)
+    .option('--verbose', 'Show detailed progress')
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = path.resolve(cmdOptions.path || opts.path);
@@ -58,61 +146,122 @@ export function registerThemeReinstallCommand(
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
       const createBackupFlag = cmdOptions.backup !== false;
       const useJson = opts.json || cmdOptions.json;
+      const verbose = opts.verbose || cmdOptions.verbose;
 
       const logger = createLogger('info');
       if (useJson) {
         logger.setSilent(true);
       }
 
-      if (!themeSlug) {
-        const error = { success: false, error: 'Theme slug is required. Use --theme <slug>' };
-        formatOutput(error, opts.json || cmdOptions.json);
-        process.exit(1);
-      }
-
       if (!fs.existsSync(targetPath)) {
         const error = { success: false, error: 'Path does not exist', path: targetPath };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
       let wpResult;
       if (!cmdOptions.path && opts.path === process.cwd()) {
         wpResult = detectWordPressRoot(targetPath);
-        if (wpResult.found) {
-          targetPath = wpResult.path;
+        if (!wpResult.found) {
+          const error = { success: false, error: formatWpPathError(wpResult, 'theme:reinstall'), path: targetPath };
+          formatOutput(error, useJson);
+          process.exit(1);
         }
+        targetPath = wpResult.path;
       } else {
         const wpConfigPath = path.join(targetPath, 'wp-config.php');
         if (fs.existsSync(wpConfigPath)) {
           wpResult = { path: targetPath, found: true, searchedPaths: [targetPath] };
         } else {
           wpResult = { path: targetPath, found: false, searchedPaths: [targetPath] };
+          const error = { success: false, error: formatWpPathError(wpResult, 'theme:reinstall'), path: targetPath };
+          formatOutput(error, useJson);
+          process.exit(1);
         }
       }
 
-      if (!wpResult.found) {
-        const error = { success: false, error: formatWpPathError(wpResult, 'theme:reinstall'), path: targetPath };
-        formatOutput(error, opts.json || cmdOptions.json);
-        process.exit(1);
-      }
-      targetPath = wpResult.path;
-
       const themesPath = path.join(targetPath, 'wp-content', 'themes');
+
+      if (!themeSlug) {
+        if (!fs.existsSync(themesPath)) {
+          const error = { success: false, error: 'Themes directory does not exist', path: themesPath };
+          formatOutput(error, useJson);
+          process.exit(1);
+        }
+
+        const entries = fs.readdirSync(themesPath);
+        const themeSlugs = entries.filter((entry) => {
+          const entryPath = path.join(themesPath, entry);
+          const stat = fs.statSync(entryPath);
+          return stat.isDirectory() && entry !== '.';
+        });
+
+        if (themeSlugs.length === 0) {
+          const result: ReinstallResult = {
+            success: true,
+            reinstalled: [],
+            failed: [],
+          };
+          formatOutput(result, useJson);
+          return;
+        }
+
+        if (dryRun) {
+          const result: ReinstallResult = {
+            success: true,
+            reinstalled: [],
+            failed: [],
+          };
+          formatOutput(result, useJson);
+          if (!useJson) {
+            console.log(`\n[DRY RUN] Would reinstall all themes: ${themeSlugs.join(', ')}`);
+          }
+          return;
+        }
+
+        const reinstalled: string[] = [];
+        const failed: { slug: string; error: string }[] = [];
+
+        for (const slug of themeSlugs) {
+          const themeDir = path.join(themesPath, slug);
+          const result = await reinstallTheme(slug, themeDir, themesPath, createBackupFlag, verbose);
+          if (result.success) {
+            reinstalled.push(slug);
+          } else {
+            failed.push({ slug, error: result.error || 'Unknown error' });
+          }
+        }
+
+        const finalResult: ReinstallResult = {
+          success: failed.length === 0,
+          reinstalled,
+          failed,
+        };
+
+        formatOutput(finalResult, useJson);
+
+        if (failed.length > 0) {
+          console.log('\nThemes that could not be re-installed:');
+          for (const { slug, error } of failed) {
+            console.log(`  - ${slug}: ${error}`);
+          }
+          process.exit(1);
+        }
+        return;
+      }
+
       const themeDir = path.join(themesPath, themeSlug);
-      const themeExists = fs.existsSync(themeDir);
       const downloadUrl = `https://downloads.wordpress.org/theme/${themeSlug}.latest-stable.zip`;
 
       if (dryRun) {
+        const themeExists = fs.existsSync(themeDir);
         const result = {
           success: true,
           themeSlug,
-          version: 'latest-stable',
-          backupPath: null as string | null,
           dryRun: true,
         };
-
-        if (!opts.json && !cmdOptions.json) {
+        formatOutput(result, useJson);
+        if (!useJson) {
           console.log(`\n[DRY RUN] Would reinstall theme: ${themeSlug}`);
           if (themeExists) {
             console.log(`[DRY RUN] Would backup existing theme at: ${themeDir}`);
@@ -121,90 +270,26 @@ export function registerThemeReinstallCommand(
           console.log(`[DRY RUN] Would download new version from: ${downloadUrl}`);
           console.log(`[DRY RUN] Would place theme at: ${themeDir}`);
         }
-
-        if (opts.json || cmdOptions.json) {
-          formatOutput(result, opts.json || cmdOptions.json);
-        }
         return;
       }
 
-      logger.info(`Downloading ${themeSlug} from wordpress.org`);
+      const result = await reinstallTheme(themeSlug, themeDir, themesPath, createBackupFlag, verbose);
 
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wp-theme-'));
-      const zipPath = path.join(tempDir, 'theme.zip');
-
-      try {
-        const response = await fetch(downloadUrl);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to download theme: ${response.status} ${response.statusText}`);
-        }
-
-        const buffer = await response.arrayBuffer();
-        fs.writeFileSync(zipPath, Buffer.from(buffer));
-
-        const zip = new AdmZip(zipPath);
-        const extractDir = path.join(tempDir, 'extracted');
-        zip.extractAllTo(extractDir, true);
-
-        const entries = fs.readdirSync(extractDir);
-        let extractedThemeDir: string | null = null;
-        
-        for (const entry of entries) {
-          const entryPath = path.join(extractDir, entry);
-          const stat = fs.statSync(entryPath);
-          if (stat.isDirectory()) {
-            extractedThemeDir = entryPath;
-            break;
-          }
-        }
-
-        if (!extractedThemeDir) {
-          throw new Error('Invalid theme archive: no theme directory found');
-        }
-
-        const result = {
-          success: true,
-          themeSlug,
-          version: 'latest-stable',
-          backupPath: null as string | null,
-          dryRun,
-        };
-
-        if (!opts.json && !cmdOptions.json) {
-          if (themeExists) {
-            if (createBackupFlag) {
-              const backupResult = createThemeBackup(themesPath, themeSlug);
-              if (backupResult) {
-                result.backupPath = backupResult.backupPath;
-                console.log(`Backup created at: ${backupResult.backupPath}`);
-              }
-            } else {
-              console.log(`Skipping backup (--backup=false)`);
-            }
-            
-            fs.rmSync(themeDir, { recursive: true, force: true });
-            console.log(`Removed old theme files`);
-          }
-
-          copyDirRecursive(extractedThemeDir, themeDir);
-          console.log(`Installed theme: ${themeSlug}`);
-        }
-
-        if (opts.json || cmdOptions.json) {
-          formatOutput(result, opts.json || cmdOptions.json);
-        }
-      } catch (err) {
+      if (!result.success) {
         const error = {
           success: false,
+          error: result.error || 'Unknown error',
           themeSlug,
-          error: String(err),
-          dryRun,
         };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
-      } finally {
-        fs.rmSync(tempDir, { recursive: true, force: true });
       }
+
+      const successResult: ReinstallResult = {
+        success: true,
+        reinstalled: [themeSlug],
+        failed: [],
+      };
+      formatOutput(successResult, useJson);
     });
 }
