@@ -25,6 +25,8 @@ export interface Logger {
 interface LoggerInstance {
   logger: winston.Logger;
   consoleTransport: winston.transport;
+  fileTransport: winston.transport | null;
+  fileLoggingEnabled: boolean;
 }
 
 let loggerState: LoggerInstance | null = null;
@@ -57,6 +59,7 @@ function createFileFormat() {
 
 function buildLogger(level: LogLevel): LoggerInstance {
   const consoleTransport = new winston.transports.Console({
+    silent: true,
     format: createHumanFormat(),
   });
 
@@ -65,21 +68,21 @@ function buildLogger(level: LogLevel): LoggerInstance {
     createFileFormat()()
   );
 
-  const logger = winston.createLogger({
-    level,
-    transports: [
-      consoleTransport,
-      new winston.transports.File({
-        filename: path.join(LOG_DIR, LOG_FILE),
-        level: 'debug',
-        maxsize: 10 * 1024 * 1024,
-        maxFiles: 5,
-        format: fileFormat,
-      }),
-    ],
+  const fileTransport = new winston.transports.File({
+    filename: path.join(LOG_DIR, LOG_FILE),
+    level: 'debug',
+    maxsize: 10 * 1024 * 1024,
+    maxFiles: 5,
+    format: fileFormat,
+    silent: true,
   });
 
-  return { logger, consoleTransport };
+  const logger = winston.createLogger({
+    level,
+    transports: [consoleTransport, fileTransport],
+  });
+
+  return { logger, consoleTransport, fileTransport, fileLoggingEnabled: false };
 }
 
 export function createLogger(level: LogLevel = 'info'): Logger {
@@ -112,6 +115,17 @@ export function createLogger(level: LogLevel = 'info'): Logger {
       }
     },
   };
+}
+
+export function enableFileLogging(): void {
+  if (loggerState && loggerState.fileTransport) {
+    loggerState.fileTransport.silent = false;
+    loggerState.fileLoggingEnabled = true;
+  }
+}
+
+export function isFileLoggingEnabled(): boolean {
+  return loggerState?.fileLoggingEnabled ?? false;
 }
 
 export function getLogger(): Logger {

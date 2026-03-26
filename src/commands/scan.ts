@@ -10,9 +10,7 @@ import { createLogger, getLogger, LogLevel, generateReport, saveReport, getDefau
 import { generateHtmlReport, saveHtmlReport, getDefaultHtmlReportPath, HtmlReportData } from '../html-report';
 import { loadWhitelist, applyWhitelist, WhitelistConfig } from '../whitelist';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
-import { severityColor, colors } from '../formatters/colors';
-import { severityIcon, icons } from '../formatters/icons';
-import { createThreatTable, createVulnerabilityTable } from '../formatters/table';
+import { severityColor, severityIcon, icons, createTable, createVulnerabilityTable, createThreatTable } from '../output';
 
 interface CliOptions {
   dryRun: boolean;
@@ -105,7 +103,7 @@ async function scanDirectory(
     filteredThreats = applyWhitelistFn(threats, whitelist);
     whitelistedCount = totalBeforeWhitelist - filteredThreats.length;
     if (whitelistedCount > 0) {
-      logger.info(`Whitelist filtered out ${whitelistedCount} threat(s)`);
+      console.log(`Whitelist filtered out ${whitelistedCount} threat(s)`);
     }
   }
 
@@ -158,7 +156,9 @@ export function registerScanCommand(
       if (useJson) {
         logger.setSilent(true);
       }
-      logger.info(`Starting scan of directory: ${targetPath}`, { logLevel });
+      if (!useJson) {
+        console.log(`${icons.scanning} Starting scan of directory: ${targetPath}`);
+      }
 
       const normalizedPath = path.resolve(targetPath);
 
@@ -183,11 +183,13 @@ export function registerScanCommand(
         try {
           whitelist = loadWhitelist(whitelistFile);
           if (whitelist.paths.length > 0 || whitelist.signatures.length > 0 || whitelist.extensions.length > 0) {
-            logger.info('Loaded whitelist configuration', {
-              paths: whitelist.paths.length,
-              signatures: whitelist.signatures.length,
-              extensions: whitelist.extensions.length,
-            });
+            if (!useJson) {
+              console.log('Loaded whitelist configuration', {
+                paths: whitelist.paths.length,
+                signatures: whitelist.signatures.length,
+                extensions: whitelist.extensions.length,
+              });
+            }
           }
         } catch (wlErr) {
           logger.warn('Failed to load whitelist configuration', { error: String(wlErr) });
@@ -263,9 +265,9 @@ export function registerScanCommand(
 
         if (!useJson) {
           if (result.threats.length > 0) {
-            console.log(`\n${icons.error} ${colors.critical('UNSAFE')} – Issues found\n`);
+            console.log(`\n${icons.error} ${severityColor('critical')('UNSAFE')} – Issues found\n`);
             
-            const threatTable = createThreatTable();
+            const threatTable = createThreatTable() as any;
             for (const threat of result.threats) {
               const lineInfo = threat.line !== null ? `:${threat.line}` : '';
               const sev = (threat as any).severity || 'medium';
@@ -281,14 +283,14 @@ export function registerScanCommand(
               console.log(`\nFiltered out ${result.whitelisted} whitelisted threat(s)`);
             }
           } else {
-            console.log(`\n${icons.safe} ${colors.info('SAFE')} – No threats found (safe)`);
+            console.log(`\n${icons.safe} ${severityColor('info')('SAFE')} – No threats found (safe)`);
           }
         }
 
         if (!useJson && vulnerabilities.length > 0) {
           console.log(`\nVULNERABILITIES (${vulnerabilities.length})\n`);
           
-          const vulnTable = createVulnerabilityTable();
+          const vulnTable = createVulnerabilityTable() as any;
           for (const vuln of vulnerabilities) {
             const sev = vuln.severity || 'medium';
             vulnTable.push([
@@ -346,14 +348,16 @@ export function registerScanCommand(
           logger.info('HTML report saved', { htmlReportPath });
         }
 
-        if (result.safe) {
-          logger.info('Scan completed successfully - no threats found');
-        } else {
-          logger.warn(`Scan completed - found ${result.threats.length} threat(s)`);
+        if (!useJson) {
+          if (result.safe) {
+            console.log(`\n${icons.safe} Scan completed successfully - no threats found`);
+          } else {
+            console.log(`\n${icons.error} Scan completed - found ${result.threats.length} threat(s)`);
+          }
         }
 
         if (useJson) {
-          formatOutput(output, true);
+          formatOutput(output, useJson);
         }
       } catch (err) {
         const error = { error: 'Scan failed', message: String(err) };

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { enableFileLogging } from './logger';
 import { registerScanCommand } from './commands/scan';
 import { registerCoreRepairCommand } from './commands/core-repair';
 import { registerPluginReinstallCommand } from './commands/plugin-reinstall';
@@ -46,6 +47,7 @@ export interface CliOptions {
   report: boolean;
   htmlReport: boolean;
   logLevel: string;
+  logFile: boolean;
 }
 
 const program = new Command();
@@ -73,7 +75,8 @@ program
   .option('--find-unknown', 'Find unknown files not part of WordPress core', false)
   .option('--report', 'Save JSON report to file', false)
   .option('--html-report', 'Save HTML report to file', false)
-  .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info');
+  .option('--log-level <level>', 'Logging verbosity (debug, info, warn, error)', 'info')
+  .option('--log-file', 'Enable file logging for this session', false);
 
 registerScanCommand(program, getOpts);
 registerCoreRepairCommand(program, getOpts);
@@ -109,6 +112,11 @@ registerEnvCheckCommand(program, getOpts);
 registerSslCheckCommand(program, getOpts);
 
 program.parse(process.argv);
+
+const opts = program.opts() as CliOptions;
+if (opts.logFile) {
+  enableFileLogging();
+}
 
 if (!process.argv.slice(2).length) {
   program.outputHelp();
