@@ -270,16 +270,18 @@ export function registerDbScanCommand(
     .option('--db-pass <pass>', 'Database password (optional if wp-config.php exists)')
     .option('--dry-run', 'Preview SQL queries without executing', false)
     .option('--force', 'Actually execute the scan', false)
+    .option('--json', 'Output results as JSON', false)
     .action(async (cmdOptions) => {
       const opts = getOpts();
       let targetPath = cmdOptions.path || opts.path;
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
+      const useJson = opts.json || cmdOptions.json;
 
       const normalizedPath = path.resolve(targetPath);
 
       if (!fs.existsSync(normalizedPath)) {
         const error = { success: false, error: 'Path does not exist', path: normalizedPath };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -305,7 +307,7 @@ export function registerDbScanCommand(
           error: formatWpPathError(wpResult, 'db:scan'),
           path: normalizedPath,
         };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
       
@@ -316,7 +318,7 @@ export function registerDbScanCommand(
           error: 'wp-config.php not found and database parameters not provided',
           path: targetPath,
         };
-        formatOutput(error, opts.json || cmdOptions.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
       
@@ -327,10 +329,10 @@ export function registerDbScanCommand(
           dbName: cmdOptions.dbName,
           dbUser: cmdOptions.dbUser,
           dbPass: cmdOptions.dbPass,
-          useJson: opts.json || cmdOptions.json,
+          useJson,
         });
         
-        if (!opts.json && !cmdOptions.json) {
+        if (!useJson) {
           console.log(`\nDatabase scan completed`);
           console.log(`Scanned tables: ${result.scannedTables.join(', ')}`);
           
@@ -351,7 +353,7 @@ export function registerDbScanCommand(
             }
           }
         } else {
-          formatOutput(result, opts.json || cmdOptions.json);
+          formatOutput(result, useJson);
         }
       } catch (err) {
         const error = { 
@@ -359,8 +361,8 @@ export function registerDbScanCommand(
           error: String(err),
           dryRun,
         };
-        if (opts.json || cmdOptions.json) {
-          formatOutput(error, opts.json || cmdOptions.json);
+        if (useJson) {
+          formatOutput(error, useJson);
         } else {
           console.error(`\nError: ${error.error}`);
         }
