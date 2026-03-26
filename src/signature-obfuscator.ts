@@ -94,16 +94,18 @@ export function obfuscateSignatures<T extends { id: string; pattern?: string; ty
 ): (Omit<T, 'pattern'> & ObfuscatedSignature)[] {
   return signatures.map(sig => {
     if (!sig.pattern) {
+      const { pattern, ...sigWithoutPattern } = sig;
       return {
-        ...sig,
+        ...sigWithoutPattern,
         obfuscatedPattern: '',
         deobfuscationKey: key,
       } as Omit<T, 'pattern'> & ObfuscatedSignature;
     }
     
     const { obfuscated } = obfuscatePattern(sig.pattern, key);
+    const { pattern, ...sigWithoutPattern } = sig;
     return {
-      ...sig,
+      ...sigWithoutPattern,
       obfuscatedPattern: obfuscated,
       deobfuscationKey: key,
     };

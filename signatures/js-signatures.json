@@ -1,88 +1,97 @@
 {
   "version": "1.0.0",
   "description": "JavaScript malware signatures for Clean Sweep CLI",
-  "lastUpdated": "2026-03-23",
+  "lastUpdated": "2026-03-26",
   "signatures": [
     {
       "id": "js-eval-002",
       "name": "Template Literal eval",
       "description": "Uses eval() with template literal",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*`",
       "type": "malicious-eval",
-      "category": "code-execution"
+      "category": "code-execution",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7LA==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-eval-005",
       "name": "setTimeout Code Execution",
       "description": "Uses setTimeout with string for code execution",
       "severity": "high",
-      "pattern": "setTimeout\\s*\\(\\s*['\"`]",
       "type": "malicious-eval",
-      "category": "code-execution"
+      "category": "code-execution",
+      "obfuscatedPattern": "PCQFGCEzAT5MPG4iZnp2KjZyDUAaUQw=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-eval-006",
       "name": "setInterval Code Execution",
       "description": "Uses setInterval with string for code execution",
       "severity": "high",
-      "pattern": "setInterval\\s*\\(\\s*['\"`]",
       "type": "malicious-eval",
-      "category": "code-execution"
+      "category": "code-execution",
+      "obfuscatedPattern": "PCQFBSYqASNPKV4NPwwCXhkrfDwfEzE8",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-api-001",
       "name": "Child Process exec",
       "description": "Executes system commands via child_process",
       "severity": "critical",
-      "pattern": "child_process.*\\.exec\\s*\\(",
       "type": "suspicious-api",
-      "category": "system-command"
+      "category": "system-command",
+      "obfuscatedPattern": "LCkYICwBFCNWK1ciPwh0Kms9LgJbbSJLE2k=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-api-002",
       "name": "Child Process spawn",
       "description": "Spawns processes via child_process",
       "severity": "high",
-      "pattern": "child_process.*spawn\\s*\\(",
       "type": "suspicious-api",
-      "category": "system-command"
+      "category": "system-command",
+      "obfuscatedPattern": "LCkYICwBFCNWK1ciPwh0BTU5IQlkQns9Zw==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-api-003",
       "name": "Process Module Require",
       "description": "Requires process module in suspicious context",
       "severity": "high",
-      "pattern": "require\\s*\\(\\s*['\"]process['\"]",
       "type": "suspicious-api",
-      "category": "system-info"
+      "category": "system-info",
+      "obfuscatedPattern": "PSQAOSEsAQ1KYm55EFV0LWJ6CxdKXjIEPDIqa2oD",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-api-004",
       "name": "Process Binding Access",
       "description": "Accesses internal Node.js bindings",
       "severity": "critical",
-      "pattern": "process\\.binding\\s*\\(",
       "type": "suspicious-api",
-      "category": "system-info"
+      "category": "system-info",
+      "obfuscatedPattern": "PzMeLy0tFw0XKls/KE8wERkrfDsQ",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-api-006",
       "name": "eval() with Variable",
       "description": "Uses eval with variable content",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*\\$",
       "type": "malicious-eval",
-      "category": "code-execution"
+      "category": "code-execution",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7EAI=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "js-xss-005",
       "name": "eval-based XSS",
       "description": "Uses eval to execute potentially malicious content",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*(location|document|window)",
       "type": "xss",
-      "category": "cross-site-scripting"
+      "category": "cross-site-scripting",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7ZEoxFSQsPwhWTTUOLDQcKSYqGCZQJlY+Ow8=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     }
   ]
 }

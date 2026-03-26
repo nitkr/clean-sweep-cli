@@ -1,183 +1,197 @@
 {
   "version": "1.0.0",
   "description": "PHP malware signatures for Clean Sweep CLI",
-  "lastUpdated": "2026-03-23",
+  "lastUpdated": "2026-03-26",
   "signatures": [
     {
       "id": "php-webshell-001",
       "name": "Base64 Encoded Webshell",
       "description": "Uses base64_decode with eval to execute encoded commands",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*base64_decode",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7LkctE3NsCQNdUj4FKg==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-webshell-002",
       "name": "POST-based Webshell",
       "description": "Executes commands sent via POST parameters",
       "severity": "critical",
-      "pattern": "\\$_POST.*eval|eval\\s*\\(\\s*\\$_POST",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "E2UuHAcNMH8TLUQwIFo7ACQ0ChQSbXk9PGstaBcOKwJt",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-webshell-003",
       "name": "GET-based Command Execution",
       "description": "Executes commands from GET parameters",
       "severity": "critical",
-      "pattern": "shell_exec\\s*\\(\\s*\\$_GET",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "PCkUICQBASlcK24iZnp2KjZyCkNndhQ1",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-webshell-003b",
       "name": "POST-based Command Execution",
       "description": "Executes commands from POST parameters",
       "severity": "critical",
-      "pattern": "shell_exec\\s*\\(\\s*\\$_POST",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "PCkUICQBASlcK24iZnp2KjZyCkNnYR4yGw==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-webshell-003c",
       "name": "REQUEST-based Command Execution",
       "description": "Executes commands from REQUEST parameters",
       "severity": "critical",
-      "pattern": "shell_exec\\s*\\(\\s*\\$_REQUEST",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "PCkUICQBASlcK24iZnp2KjZyCkNnYxQwGgQiGA==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-webshell-004",
       "name": "Hidden Input Webshell",
       "description": "Uses hidden form inputs for command injection",
       "severity": "high",
-      "pattern": "<input[^>]*type\\s*=\\s*['\"]hidden['\"][^>]*name\\s*=\\s*['\"]cmd",
       "type": "webshell",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "cygfPD0qPw8HFRglNVY7KjZyaztLGwpGbRwZJSw6AT9ibxAMF3hgK282NwpdbSJLch0CZhN5RgxaJVY=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
-
     {
       "id": "php-backdoor-001",
       "name": "Function Callback Backdoor with User Input",
       "description": "Uses call_user_func with user input for dynamic code execution",
       "severity": "critical",
-      "pattern": "call_user_func\\s*\\(\\s*\\$(?:GET|POST|REQUEST|COOKIE|SERVER)",
       "type": "backdoor",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "LCAdIBcrFzRLF1QkIkUCBW8EfjtLGw1FZ35LCw0KGAF2G2YtHmMPIwALAht7fh4qBgQNHw0MMhRrYQ==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-backdoor-002",
       "name": "Create Function Backdoor",
       "description": "Creates anonymous functions dynamically",
       "severity": "critical",
-      "pattern": "create_function\\s*\\(",
       "type": "backdoor",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "LDMULTw7OzdMJlElJUkwKjZyCk8=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-backdoor-003",
       "name": "preg_replace /e Callback with Obfuscation",
       "description": "Uses preg_replace with /e modifier combined with encoding functions for code execution",
       "severity": "critical",
-      "pattern": "preg_replace\\s*\\([^)]*\\/e[^)]*(?:base64_decode|gzinflate|gzuncompress|eval)",
       "type": "backdoor",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "PzMUKxcsASFVKVE0EFV0Km0DCE5lGw1OKhovZRV0TG4DKlMiKRBqKSE9NQhcVC0GNSgfKiQ/EDRFL0gkIkUxGzUqMxRLTTQXLi1Y",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-backdoor-004",
       "name": "assert() with Obfuscation",
       "description": "Uses assert() combined with encoding functions for dynamic code execution",
       "severity": "critical",
-      "pattern": "assert\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress)\\s*\\(",
       "type": "backdoor",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "LjICKToqOCITFBoNPwx2SX86NxRdB2U+KyQSIyw7GDZDIVw3IEcqEzk/LBJWUj4MPzMUPzt3OCITFBo=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-backdoor-005",
       "name": "Array Map Execution with User Input",
       "description": "Uses array_map with user input data for code execution",
       "severity": "high",
-      "pattern": "array_map\\s*\\(\\s*\\$[a-zA-Z_]\\w*,\\s*\\$_(?:GET|POST|REQUEST|COOKIE)",
       "type": "backdoor",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "LjMDLTEBCTBJFEF7EA4CBW8EcjxZHCsgYhsuERQpTn1lOxgNaHl2SX8fEzNEYR4yGz0jCRkLIQJtNHEeA20XM2w=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
-
-
-
     {
       "id": "php-encoded-005",
       "name": "Chunk Split with User Input",
       "description": "Uses chunk_split with user input for encoding manipulation",
       "severity": "medium",
-      "pattern": "chunk_split\\s*\\(\\s*\\$_(?:GET|POST|REQUEST|COOKIE)",
       "type": "encoded-shell",
-      "category": "obfuscation"
+      "category": "obfuscation",
+      "obfuscatedPattern": "LCkEIiMBFyFVIUYNPwwCXhkrfDscbnledQY0GDQOKwJtNGAUHXMbJREkFSh3ehgkZg==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
-
     {
       "id": "php-suspicious-002",
       "name": "Proc Open Execution",
       "description": "Uses proc_open for process manipulation",
       "severity": "high",
-      "pattern": "proc_open\\s*\\(",
       "type": "suspicious-function",
-      "category": "system-command"
+      "category": "system-command",
+      "obfuscatedPattern": "PzMeLxcxFDRXFEF7EA4=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-003",
       "name": "PCNTL Process Control",
       "description": "Uses pcntl_exec for process execution",
       "severity": "high",
-      "pattern": "pcntl_exec\\s*\\(",
       "type": "suspicious-function",
-      "category": "system-command"
+      "category": "system-command",
+      "obfuscatedPattern": "PyIfOCQBASlcK24iZnp2",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-004",
       "name": "URL File Access",
       "description": "Uses file_get_contents with URLs",
       "severity": "medium",
-      "pattern": "file_get_contents\\s*\\(\\s*['\"]http",
       "type": "suspicious-function",
-      "category": "network-access"
+      "category": "network-access",
+      "obfuscatedPattern": "KSgdKRc5ASVmK10/OEMwAjYEJU1kGQ0SZRpWbhU2ECVJ",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-006",
       "name": "Multiple Encoding Layers with eval",
       "description": "Multiple encoding functions chained with eval execution",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13)\\s*\\([^)]*\\$[^)]*\\)",
       "type": "multi-layer-obfuscation",
-      "category": "obfuscation"
+      "category": "obfuscation",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7ZBlkFCQrM1EMbjUELC4VKTQ5HjhXLl4wOEMiET8tOARXXCETKjICMDsqFg5LJ0Zgfw8CBW8EfjxmGAxLE2UqEmEDTg0Q",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-007",
       "name": "Variable Function Call with Dangerous Functions",
       "description": "Uses variable function names with dangerous encoding functions",
       "severity": "high",
-      "pattern": "\\$[a-zA-Z_]\\w*\\s*\\(\\s*(?:base64_decode|gzinflate|gzuncompress|str_rot13|eval)\\s*\\(",
       "type": "dynamic-function",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "E2UqLWUkJXxjF28NOwwCBW8EfjtLG3ledSMQPy1oUA5dLVE+KEMiET8xOAFUUCUEMyYLOSY9CzxJOlciP1otAjcHJAhMAGIdKjcQIGECF3tlYA==",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-009",
       "name": "Eval with Variable",
       "description": "Uses eval with variable content",
       "severity": "critical",
-      "pattern": "eval\\s*\\(\\s*\\$",
       "type": "suspicious-function",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "KjcQIBQtTg0RFEF7EAI=",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     },
     {
       "id": "php-suspicious-010",
       "name": "Include/Require Remote",
       "description": "Includes or requires remote files",
       "severity": "critical",
-      "pattern": "(include|require)\\s*\\(\\s*['\"]http",
       "type": "remote-inclusion",
-      "category": "remote-code-execution"
+      "category": "remote-code-execution",
+      "obfuscatedPattern": "ZygfLyQrADRFOlcgOU8sE2wEJU1kGQ0SZRpWbhU2ECVJ",
+      "deobfuscationKey": "OAqLH^dQ9H2QL&^vEXVg81Qa"
     }
   ]
 }
