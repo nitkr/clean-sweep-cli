@@ -151,6 +151,9 @@ export function registerQuarantineCommand(
       const useJson = opts.json || cmdOptions.json;
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
       const logger = createLogger(logLevel);
+      if (useJson) {
+        logger.setSilent(true);
+      }
       const dryRun = (cmdOptions.dryRun || opts.dryRun) && !(cmdOptions.force || opts.force);
 
       if (!fs.existsSync(targetPath)) {

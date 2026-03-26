@@ -144,11 +144,15 @@ export function registerScanBatchCommand(
       const verbose = opts.verbose || cmdOptions.verbose;
       const logLevel = (cmdOptions.logLevel || opts.logLevel) as LogLevel;
       const logger = createLogger(logLevel);
+      const useJson = opts.json || cmdOptions.json;
+      if (useJson) {
+        logger.setSilent(true);
+      }
 
       if (!cmdOptions.listFile) {
         const error = { error: 'List file is required. Use --list-file <path>' };
         logger.error('scan:batch failed: no list file provided');
-        formatOutput(error, opts.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -158,14 +162,14 @@ export function registerScanBatchCommand(
       } catch (err) {
         const error = { error: String(err) };
         logger.error('Failed to read list file', { error: String(err) });
-        formatOutput(error, opts.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
       if (directories.length === 0) {
         const error = { error: 'List file is empty or contains only comments' };
         logger.error('scan:batch failed: empty list file');
-        formatOutput(error, opts.json);
+        formatOutput(error, useJson);
         process.exit(1);
       }
 
@@ -249,7 +253,7 @@ export function registerScanBatchCommand(
         errors: errors.length > 0 ? errors : undefined,
       };
 
-      formatOutput(output, opts.json);
+      formatOutput(output, useJson);
 
       if (!report.overallSafe) {
         process.exit(2);

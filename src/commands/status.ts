@@ -1,6 +1,8 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs';
+import chalk from 'chalk';
+import { icons } from '../output';
 import { detectWordPressRoot, formatWpPathError } from '../wp-path-detector';
 
 interface CliOptions {
@@ -187,13 +189,15 @@ export function registerStatusCommand(
       if (useJson) {
         formatOutput(result, useJson);
       } else {
-        console.log('WordPress Status:');
-        console.log(`  Version: ${result.version || 'Unknown'}`);
-        console.log(`  Plugins: ${result.pluginsCount}`);
-        console.log(`  Themes: ${result.themesCount}`);
-        console.log(`  Database: ${result.dbConnected ? 'Connected' : 'Not connected'}`);
-        console.log(`  wp-content writable: ${result.wpContentWritable ? 'Yes' : 'No'}`);
-        console.log(`  Last core update check: ${result.lastCoreUpdate || 'Unknown'}`);
+        console.log(`\n${icons.info} ${chalk.bold('WordPress Status:')}`);
+        console.log(`  ${chalk.blue('Version:')} ${result.version || chalk.gray('Unknown')}`);
+        console.log(`  ${chalk.blue('Plugins:')} ${result.pluginsCount}`);
+        console.log(`  ${chalk.blue('Themes:')} ${result.themesCount}`);
+        const dbStatus = result.dbConnected ? chalk.green('Connected') : chalk.red('Not connected');
+        console.log(`  ${chalk.blue('Database:')} ${dbStatus}`);
+        const writableStatus = result.wpContentWritable ? chalk.green('Yes') : chalk.red('No');
+        console.log(`  ${chalk.blue('wp-content writable:')} ${writableStatus}`);
+        console.log(`  ${chalk.blue('Last core update check:')} ${result.lastCoreUpdate || chalk.gray('Unknown')}`);
       }
     });
 }
