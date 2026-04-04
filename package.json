@@ -10,8 +10,10 @@
     "build": "tsc",
     "build:pkg": "pkg . --out-path dist/pkg",
     "type-check": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "npm run build"
   },
+  "files": ["bin", "dist", "signatures"],
   "pkg": {
     "assets": [
       "signatures/**/*"
